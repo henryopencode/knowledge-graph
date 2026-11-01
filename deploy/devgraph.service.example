@@ -1,0 +1,25 @@
+[Unit]
+Description=DevGraph Markdown Knowledge Graph
+After=network.target
+
+[Service]
+Type=simple
+User=devgraph
+Group=devgraph
+WorkingDirectory=/opt/devgraph/current
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/etc/devgraph/runtime.env
+ExecStart=/usr/bin/python3 /opt/devgraph/current/server.py --port 8765 --vault /var/lib/devgraph/vault --public-origin ${DEVGRAPH_PUBLIC_ORIGIN}
+Restart=on-failure
+RestartSec=3
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/devgraph
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

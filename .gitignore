@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+.local/
+.backups/
+.learning/
+.env
+.env.*
+!.env.example
+vault/.trash/
+vault/.obsidian/workspace*.json
