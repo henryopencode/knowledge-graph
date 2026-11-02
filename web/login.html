@@ -1,27 +1,62 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>登录 · DevGraph</title>
-  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./login.css">
-  <script src="./login.js" defer></script>
-</head>
-<body>
-  <main class="login-panel">
-    <div class="brand"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="m9 9 19 7-14 12L9 9"/><circle cx="9" cy="9" r="4"/><circle cx="28" cy="16" r="4"/><circle cx="14" cy="28" r="4"/></svg><span>DevGraph</span></div>
-    <h1>打开你的知识库</h1>
-    <p class="intro">连接项目、问题与思考。</p>
-    <form id="login-form">
-      <label for="username">用户名</label>
-      <input id="username" name="username" placeholder="输入用户名" autocomplete="username" required maxlength="100">
-      <label for="password">密码</label>
-      <input id="password" name="password" type="password" placeholder="输入访问密码" autocomplete="current-password" required autofocus>
-      <p id="login-error" role="alert"></p>
-      <button id="login-submit" type="submit">进入知识库 <span aria-hidden="true">→</span></button>
-    </form>
-    <div class="login-footer"><span class="status-dot"></span>私人知识工作区</div>
-  </main>
-</body>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{t `label_sign_in_devgraph`}}</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./login.css" />
+    <script src="./i18n.js" defer></script>
+    <script src="./login.js" defer></script>
+  </head>
+  <body>
+    <main class="login-panel">
+      <div class="brand">
+        <svg viewBox="0 0 36 36" aria-hidden="true">
+          <path d="m9 9 19 7-14 12L9 9" />
+          <circle cx="9" cy="9" r="4" />
+          <circle cx="28" cy="16" r="4" />
+          <circle cx="14" cy="28" r="4" /></svg
+        ><span>DevGraph</span>
+      </div>
+      <h1>{{t `label_open_your_knowledge_workspace`}}</h1>
+      <label class="workspace-language"
+        ><span class="sr-only">{{t `language`}}</span
+        ><select id="workspace-language" aria-label="{{t `language`}}">
+          <option value="zh-CN">简体中文</option>
+          <option value="zh-TW">繁體中文</option>
+          <option value="en">English</option>
+        </select></label
+      >
+      <form id="login-form">
+        <label for="username">{{t `label_username`}}</label>
+        <input
+          id="username"
+          name="username"
+          placeholder="{{t `label_enter_your_username`}}"
+          autocomplete="username"
+          required
+          maxlength="100"
+        />
+        <label for="password">{{t `label_password`}}</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          placeholder="{{t `label_enter_your_password`}}"
+          autocomplete="current-password"
+          required
+          autofocus
+        />
+        <p id="login-error" role="alert"></p>
+        <button id="login-submit" type="submit">
+          {{t `label_sign_in`}} <span aria-hidden="true">→</span>
+        </button>
+      </form>
+      <div class="login-footer">
+        <span class="status-dot"></span>{{t
+        `label_private_knowledge_workspace`}}
+      </div>
+    </main>
+  </body>
 </html>

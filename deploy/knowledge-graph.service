@@ -1,0 +1,25 @@
+[Unit]
+Description=DevGraph content API and authenticated knowledge workspace
+After=network.target
+
+[Service]
+Type=simple
+User=henryweb-content
+Group=henryweb-content
+WorkingDirectory=/opt/knowledge-graph/current/backend
+EnvironmentFile=/etc/knowledge-graph/api.env
+EnvironmentFile=/etc/knowledge-graph/auth.env
+ExecStart=/opt/knowledge-graph/current/backend/knowledge-graph
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/henryweb
+MemoryMax=256M
+SyslogIdentifier=knowledge-graph
+
+[Install]
+WantedBy=multi-user.target
