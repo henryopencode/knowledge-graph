@@ -210,7 +210,7 @@
   "ui.empty_tags": "暂无标签",
   "ui.empty_notes": "暂无文档",
   "ui.sample": "示例",
-  "ui.empty_list": "没有匹配的文档。",
+  "ui.empty_list": "没有找到匹配的笔记。",
   "ui.empty_content": "暂无正文。",
   "ui.empty_relations": "暂无关联。",
   "ui.filter_kind": "筛选{kind}",
@@ -269,5 +269,11 @@
   "ui.empty_workspace": "知识库暂无笔记。",
   "ui.try_another_filter": "试试其他关键词，或清除筛选条件。",
   "ui.missing_reference": "关联笔记不存在或名称不唯一",
-  "ui.unavailable_references": "未找到的关联"
+  "ui.unavailable_references": "未找到的关联",
+  "ui.search_all_notes": "搜索全部笔记…",
+  "ui.clear_search": "清空搜索",
+  "ui.search_results": "搜索结果",
+  "ui.outline_and_links": "目录与关联",
+  "ui.more_options": "更多选项",
+  "ui.related_scope": "当前笔记相关"
 }

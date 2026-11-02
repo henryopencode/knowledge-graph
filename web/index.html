@@ -12,400 +12,92 @@
     <script src="./app.js" defer></script>
   </head>
   <body>
-    <div id="workspace" class="app-shell inspector-open" data-mode="read">
-      <nav class="ribbon" aria-label="{{t `label_workspace_tools`}}">
-        <button
-          id="toggle-sidebar"
-          class="ribbon-button"
-          title="{{t `label_toggle_file_list`}}"
-          aria-label="{{t `label_toggle_file_list`}}"
-        >
+    <div id="workspace" class="app-shell" data-mode="read">
+      <header class="workspace-header">
+        <button id="toggle-sidebar" class="icon-button" title="{{t `label_toggle_file_list`}}" aria-label="{{t `label_toggle_file_list`}}" aria-controls="sidebar" aria-expanded="true">
           <span data-icon="panel-left"></span>
         </button>
-        <div class="ribbon-rule"></div>
-        <button
-          id="ribbon-graph"
-          class="ribbon-button"
-          title="{{t `label_graph`}}"
-          aria-label="{{t `label_graph`}}"
-        >
-          <span data-icon="graph"></span>
-        </button>
-        <button
-          id="ribbon-search"
-          class="ribbon-button"
-          title="{{t `label_search_documents`}}"
-          aria-label="{{t `label_search_documents`}}"
-        >
-          <span data-icon="search"></span>
-        </button>
-        <button
-          id="ribbon-list"
-          class="ribbon-button"
-          title="{{t `label_document_list`}}"
-          aria-label="{{t `label_document_list`}}"
-        >
-          <span data-icon="files"></span>
-        </button>
-        <div class="ribbon-spacer"></div>
-        <button
-          id="logout-button"
-          class="ribbon-button"
-          title="{{t `label_sign_out`}}"
-          aria-label="{{t `label_sign_out`}}"
-          hidden
-        >
-          <span data-icon="logout"></span>
-        </button>
-        <button
-          id="help-button"
-          class="ribbon-button"
-          title="{{t `label_help`}}"
-          aria-label="{{t `label_help`}}"
-        >
-          <span data-icon="help"></span>
-        </button>
-        <button
-          id="theme-button"
-          class="ribbon-button"
-          title="{{t `label_toggle_color_theme`}}"
-          aria-label="{{t `label_toggle_color_theme`}}"
-        >
-          <span data-icon="moon"></span>
-        </button>
-      </nav>
-      <aside class="sidebar" aria-label="{{t `label_workspace_files`}}">
-        <div class="sidebar-top">
-          <span>{{t `topics`}}</span>
-          <button
-            id="refresh-button"
-            class="icon-button"
-            title="{{t `label_reload_documents`}}"
-            aria-label="{{t `label_refresh_workspace`}}"
-          >
-            <span data-icon="refresh"></span>
-          </button>
+        <nav class="view-nav" aria-label="{{t `label_view_mode`}}">
+          <button id="list-tab" class="view-button active" aria-pressed="true">{{t `notes_view`}}</button>
+          <button id="graph-tab" class="view-button" aria-pressed="false">{{t `label_graph`}}</button>
+        </nav>
+        <div class="search-area">
+          <label class="search-box" for="search">
+            <span data-icon="search"></span>
+            <input id="search" type="search" placeholder="{{t `search_all_notes`}}" autocomplete="off" aria-label="{{t `label_search_workspace`}}" aria-controls="note-list" />
+            <kbd id="search-shortcut">⌘ K</kbd>
+          </label>
+          <button id="clear-search" class="icon-button" aria-label="{{t `clear_search`}}" title="{{t `clear_search`}}" hidden><span data-icon="close"></span></button>
         </div>
-        <nav
-          id="category-nav"
-          class="quick-nav"
-          aria-label="{{t `filter_documents`}}"
-        ></nav>
-        <div
-          id="file-tree"
-          class="file-tree"
-          aria-label="{{t `label_document_tree`}}"
-        ></div>
-        <details class="tags-section">
-          <summary>
-            <span data-icon="chevron-down"></span>{{t `label_tags`}}<button
-              id="clear-tags"
-              class="text-button"
-              hidden
-            >
-              {{t `label_clear`}}
-            </button>
-          </summary>
-          <div id="tags" class="tag-cloud"></div>
-        </details>
+        <div class="header-actions">
+          <button id="toggle-inspector" class="icon-button" aria-label="{{t `outline_and_links`}}" title="{{t `outline_and_links`}}" aria-controls="inspector" aria-pressed="false"><span data-icon="panel-right"></span></button>
+          <details id="workspace-menu" class="workspace-menu">
+            <summary class="icon-button" aria-label="{{t `more_options`}}" title="{{t `more_options`}}"><span data-icon="more"></span></summary>
+            <div class="menu-content">
+              <button id="fullscreen-note" class="menu-item"><span data-icon="expand"></span>{{t `label_read_document_full_screen`}}</button>
+              <label class="menu-item workspace-language"><span>{{t `language`}}</span><select id="workspace-language" aria-label="{{t `language`}}">
+                <option value="zh-CN">简体中文</option>
+                <option value="zh-TW">繁體中文</option>
+                <option value="en">English</option>
+              </select></label>
+              <button id="theme-button" class="menu-item"><span data-icon="moon"></span>{{t `label_toggle_color_theme`}}</button>
+              <button id="refresh-button" class="menu-item"><span data-icon="refresh"></span>{{t `label_refresh_workspace`}}</button>
+              <button id="logout-button" class="menu-item" hidden><span data-icon="logout"></span>{{t `label_sign_out`}}</button>
+            </div>
+          </details>
+        </div>
+      </header>
+      <aside id="sidebar" class="sidebar" aria-label="{{t `topics`}}">
+        <h2 class="sidebar-heading">{{t `topics`}}</h2>
+        <nav id="file-tree" class="file-tree" aria-label="{{t `label_document_tree`}}"></nav>
       </aside>
       <div class="main-shell">
-        <header class="tabbar">
-          <div
-            class="view-tabs"
-            role="tablist"
-            aria-label="{{t `label_view_mode`}}"
-          >
-            <button
-              id="read-tab"
-              class="view-tab active"
-              role="tab"
-              aria-selected="true"
-              aria-controls="read-panel"
-            >
-              <span data-icon="book"></span>{{t `reading`}}
-            </button>
-            <button
-              id="list-tab"
-              class="view-tab"
-              role="tab"
-              aria-selected="false"
-              aria-controls="list-panel"
-            >
-              <span data-icon="files"></span>{{t `notes_view`}}
-            </button>
-            <button
-              id="graph-tab"
-              class="view-tab"
-              role="tab"
-              aria-selected="false"
-              aria-controls="graph-panel"
-            >
-              <span data-icon="graph"></span>{{t `label_graph`}}</button>
-          </div>
-          <div class="tabbar-space"></div>
-          <button
-            id="fullscreen-note"
-            class="icon-button"
-            title="{{t `label_read_document_full_screen`}}"
-            aria-label="{{t `label_read_document_full_screen`}}"
-          ><span data-icon="expand"></span></button>
-          <label class="workspace-language"
-            ><span class="sr-only">{{t `language`}}</span
-            ><select id="workspace-language" aria-label="{{t `language`}}">
-              <option value="zh-CN">简体中文</option>
-              <option value="zh-TW">繁體中文</option>
-              <option value="en">English</option>
-            </select></label
-          ><button
-            id="toggle-inspector"
-            class="icon-button"
-            title="{{t `label_toggle_document_panel`}}"
-            aria-label="{{t `label_toggle_document_panel`}}"
-          >
-            <span data-icon="panel-right"></span>
-          </button>
-        </header>
-        <div class="workspace-toolbar">
-          <div class="breadcrumb">
-            <span data-icon="book"></span
-            ><span id="page-title">{{t `label_notes`}}</span
-            ><span class="breadcrumb-slash">/</span
-            ><span id="filter-summary">{{t `label_all_documents`}}</span>
-          </div>
-          <label class="search-box"
-            ><span data-icon="search"></span
-            ><input
-              id="search"
-              type="search"
-              placeholder="{{t `label_search_documents_2`}}"
-              autocomplete="off"
-              aria-label="{{t `label_search_workspace`}}"
-            /><kbd id="search-shortcut">⌘ K</kbd></label
-          ><button
-            id="settings-button"
-            class="icon-button"
-            aria-label="{{t `label_graph_settings`}}"
-            aria-expanded="false"
-            title="{{t `label_graph_settings`}}"
-            hidden
-          >
-            <span data-icon="sliders"></span>
-          </button>
-        </div>
         <main class="workspace-content">
-          <section
-            id="read-panel"
-            class="read-panel"
-            role="tabpanel"
-            aria-labelledby="read-tab"
-          >
+          <section id="read-panel" class="read-panel" aria-label="{{t `reading`}}">
             <div id="note-panel" class="note-panel" tabindex="0" aria-label="{{t `label_document_details`}}"></div>
           </section>
-          <section
-            id="graph-panel"
-            class="graph-panel"
-            role="tabpanel"
-            aria-labelledby="graph-tab"
-            hidden
-          >
+          <section id="list-panel" class="list-panel" aria-labelledby="list-heading" hidden>
+            <header class="list-heading">
+              <h1 id="list-heading">{{t `label_all_documents`}}</h1>
+              <span id="list-count" role="status" aria-live="polite" aria-atomic="true"></span>
+            </header>
+            <div id="note-list"></div>
+          </section>
+          <section id="graph-panel" class="graph-panel" aria-label="{{t `label_graph`}}" hidden>
             <div id="graph-container" class="graph-container">
-              <svg
-                id="graph"
-                role="group"
-                aria-label="{{t `label_document_graph_select_a_node_to_read_or_switch_to_the_document_li`}}"
-                tabindex="0"
-              >
-                <g id="graph-world">
-                  <g id="graph-edges"></g>
-                  <g id="graph-nodes"></g>
-                </g>
+              <svg id="graph" role="group" aria-label="{{t `label_document_graph_select_a_node_to_read_or_switch_to_the_document_li`}}" tabindex="0">
+                <g id="graph-world"><g id="graph-edges"></g><g id="graph-nodes"></g></g>
               </svg>
-              <div id="graph-empty" class="graph-empty" hidden>
-                <span data-icon="graph"></span>
-                <strong>{{t `label_no_matching_documents`}}</strong>
-                <span>{{t `try_another_filter`}}</span>
-              </div>
+              <div id="graph-empty" class="graph-empty" hidden><strong>{{t `label_no_matching_documents`}}</strong></div>
             </div>
             <div class="graph-topline">
-              <span id="graph-status">{{t `label_loading_workspace`}}</span>
-              <div
-                class="scope-switch"
-                aria-label="{{t `label_connection_depth`}}"
-              >
-                <button data-depth="0" aria-pressed="false">
-                  {{t `label_global`}}</button
-                ><button data-depth="1" class="active" aria-pressed="true">
-                  {{t `label_1_hop`}}</button
-                ><button data-depth="2" aria-pressed="false">
-                  {{t `label_2_hops`}}
-                </button>
+              <span id="graph-status"></span>
+              <div class="scope-switch" aria-label="{{t `label_connection_depth`}}">
+                <button data-depth="1" class="active" aria-pressed="true">{{t `related_scope`}}</button>
+                <button data-depth="0" aria-pressed="false">{{t `label_global`}}</button>
               </div>
             </div>
             <div class="graph-bottomline">
-              <span class="graph-hint"
-                >{{t
-                `label_drag_to_pan_scroll_to_zoom_select_a_node_to_read`}}</span
-              >
               <div class="zoom-controls">
-                <button
-                  id="zoom-out"
-                  class="icon-button"
-                  aria-label="{{t `label_zoom_out`}}"
-                >
-                  <span data-icon="minus"></span></button
-                ><span id="zoom-label">100%</span
-                ><button
-                  id="zoom-in"
-                  class="icon-button"
-                  aria-label="{{t `label_zoom_in`}}"
-                >
-                  <span data-icon="plus"></span></button
-                ><span class="toolbar-divider"></span
-                ><button
-                  id="fit-graph"
-                  class="icon-button"
-                  aria-label="{{t `label_reset_graph_position`}}"
-                  title="{{t `label_fit_to_canvas`}}"
-                >
-                  <span data-icon="fit"></span>
-                </button>
+                <button id="zoom-out" class="icon-button" aria-label="{{t `label_zoom_out`}}"><span data-icon="minus"></span></button>
+                <span id="zoom-label">100%</span>
+                <button id="zoom-in" class="icon-button" aria-label="{{t `label_zoom_in`}}"><span data-icon="plus"></span></button>
+                <button id="fit-graph" class="icon-button" aria-label="{{t `label_reset_graph_position`}}" title="{{t `label_fit_to_canvas`}}"><span data-icon="fit"></span></button>
               </div>
             </div>
           </section>
-          <section
-            id="list-panel"
-            class="list-panel"
-            role="tabpanel"
-            aria-labelledby="list-tab"
-            hidden
-          >
-            <div class="list-heading">
-              <span id="list-count">{{t `label_all_documents`}}</span
-              ><label
-                >{{t `label_sort`}}<select
-                  id="sort-order"
-                  aria-label="{{t `label_sort_documents`}}"
-                >
-                  <option value="updated">
-                    {{t `label_recently_updated`}}
-                  </option>
-                  <option value="title">{{t `label_title`}}</option>
-                  <option value="links">{{t `label_most_connected`}}</option>
-                </select></label
-              >
-            </div>
-            <div id="note-list"></div>
-          </section>
-          <aside
-            id="inspector"
-            class="inspector"
-            aria-label="{{t `text_related_documents`}}"
-          >
-            <div class="inspector-toolbar">
-              <span>{{t `text_related_documents`}}</span>
-              <div class="inspector-actions">
-                <button
-                  id="related-graph"
-                  class="icon-button"
-                  title="{{t `view_related_graph`}}"
-                  aria-label="{{t `view_related_graph`}}"
-                >
-                  <span data-icon="graph"></span></button
-                ><button
-                  id="close-inspector"
-                  class="icon-button"
-                  title="{{t `label_close_document_panel`}}"
-                  aria-label="{{t `label_close_document_panel`}}"
-                >
-                  <span data-icon="close"></span>
-                </button>
-              </div>
-            </div>
+          <aside id="inspector" class="inspector" aria-label="{{t `outline_and_links`}}">
+            <div class="inspector-toolbar"><span>{{t `outline_and_links`}}</span><button id="close-inspector" class="icon-button" aria-label="{{t `label_close_document_panel`}}"><span data-icon="close"></span></button></div>
             <div id="relation-panel" class="relation-panel"></div>
           </aside>
-          <div id="graph-settings" class="graph-settings" hidden>
-            <div class="settings-heading">{{t `label_graph_display`}}</div>
-            <label
-              ><span>{{t `label_color_by_document_type`}}</span
-              ><input id="colored-nodes" type="checkbox" role="switch" /></label
-            ><label
-              ><span>{{t `label_show_all_edges`}}</span
-              ><input
-                id="show-edges"
-                type="checkbox"
-                role="switch"
-                checked /></label
-            ><label class="range-label"
-              ><span>{{t `label_node_spacing`}}</span
-              ><input
-                id="node-spacing"
-                type="range"
-                min="100"
-                max="320"
-                value="210"
-                aria-label="{{t `label_node_spacing`}}"
-            /></label>
-            <p>
-              {{t
-              `label_edges_represent_references_node_size_reflects_connection_count`}}
-            </p>
-          </div>
         </main>
-        <footer class="statusbar">
-          <span
-            ><span class="status-dot"></span
-            ><span id="sync-status"
-              >{{t `label_connecting_to_workspace`}}</span
-            ></span
-          >
-          <div>
-            <span id="sample-status"></span
-            ><span><span id="note-count">—</span> {{t `label_documents`}}</span
-            ><span
-              ><span id="edge-count">—</span> {{t `label_connections`}}</span
-            >
-          </div>
-        </footer>
       </div>
     </div>
-    <dialog
-      id="reader-dialog"
-      class="reader-dialog"
-      aria-labelledby="reader-heading"
-    >
+    <dialog id="reader-dialog" class="reader-dialog" aria-labelledby="reader-heading">
       <header class="reader-toolbar">
-        <button id="close-reader" class="reader-back">
-          <span data-icon="back"></span
-          ><span id="reader-back-label"
-            >{{t `label_back_to_graph`}}</span
-          ></button
-        ><span class="reader-caption"
-          ><span data-icon="file"></span
-          ><span id="reader-caption-title">{{t `label_document`}}</span></span
-        >
-        <div class="reader-toolbar-actions">
-          <kbd>{{t `label_esc_to_return`}}</kbd>
-        </div>
+        <button id="close-reader" class="reader-back"><span data-icon="back"></span><span>{{t `back_to_reading`}}</span></button>
       </header>
-      <div id="reader-scroll" class="reader-scroll">
-        <main id="reader-content" class="reader-content">
-          <h1 id="reader-heading">{{t `label_document`}}</h1>
-        </main>
-      </div>
-    </dialog>
-    <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-heading">
-      <div class="dialog-heading">
-        <div><h2 id="help-heading">{{t `label_help`}}</h2></div>
-        <button
-          id="close-help"
-          class="icon-button"
-          aria-label="{{t `label_close_help`}}"
-        >
-          <span data-icon="close"></span>
-        </button>
-      </div>
-      <div class="help-content"><p>{{t `help_body`}}</p></div>
+      <div id="reader-scroll" class="reader-scroll"><div id="reader-content" class="reader-content"><h1 id="reader-heading">{{t `label_document`}}</h1></div></div>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </body>

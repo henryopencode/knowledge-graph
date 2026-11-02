@@ -4,7 +4,7 @@
 
 ## Architecture
 
-The password-protected browser interface is for viewing only. It provides topic navigation, search, filters, outlines, related notes, a graph, language selection and full-screen reading. Creation, editing, import, backup export, deletion and publication controls are absent, including missing-link creation and editing shortcuts. Content maintenance uses the existing authenticated content API or offline maintenance tools; published snapshots and credentials are preserved.
+The password-protected browser interface is for viewing only. It provides a topic directory, reading, a graph and an always-visible global search. Clicking search immediately shows results; Enter opens the first match, Escape clears the query and returns to reading, and ⌘/Ctrl K focuses search. Results rank title matches first and show matching passages. Outlines and related notes open on demand. Language, theme, refresh, logout and full-screen reading are in the options menu. The duplicate icon rail, filter dropdowns, tag cloud and status counters have been removed. Creation, editing, import, backup export, deletion and publication controls are absent, including missing-link creation and editing shortcuts. Content maintenance uses the existing authenticated content API or offline maintenance tools; published snapshots and credentials are preserved.
 
 This repository owns the private graph interface in `web/` and the Go/Gin content service. The Next.js blog is an independent project that reads published articles through the public API. The service exposes separate listeners: `127.0.0.1:8180` for public read-only APIs and `127.0.0.1:8181` for the authenticated workspace. The public listener never registers private routes.
 

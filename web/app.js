@@ -5,6 +5,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const basePath = new URL(".", location.href).pathname;
 const icons = {
+  more: '<circle cx="4" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="20" cy="12" r="1"/>',
   expand:
     '<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6"/>',
   back: '<path d="m10 5-7 7 7 7M3 12h18"/>',
@@ -14,27 +15,11 @@ const icons = {
   "panel-right":
     '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/>',
   "chevron-down": '<path d="m6 9 6 6 6-6"/>',
-  "folder-open": '<path d="M3 7V5h6l2 2h10v12H3V7Zm0 3h18"/>',
-  folder: '<path d="M3 6h6l2 2h10v12H3V6Z"/>',
-  files: '<path d="M8 3h8l4 4v12H8V3ZM16 3v4h4M4 7v15h12"/>',
-  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16h.01"/>',
   moon: '<path d="M20.5 13.5A9 9 0 0 1 10.5 3.5a9 9 0 1 0 10 10Z"/>',
-  sliders:
-    '<path d="M4 6h8m4 0h4M4 12h3m4 0h9M4 18h10m4 0h2"/><circle cx="14" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
-  graph:
-    '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="9" r="2.5"/><circle cx="10" cy="19" r="2.5"/><path d="m8 7 7.5 1.5M7 8.5l2 8M16.5 11l-5 6"/>',
-  list: '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
-  project:
-    '<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M8 5V3h8v2M3 10h18M10 10v3h4v-3"/>',
-  incident: '<path d="m12 3 10 17H2L12 3ZM12 9v4M12 16h.01"/>',
-  decision:
-    '<path d="M12 3v5M12 8 5 13v7M12 8l7 5v7M2 17l3 3 3-3M16 17l3 3 3-3"/>',
-  concept:
-    '<path d="M9 18h6M9 21h6M8 14a6 6 0 1 1 8 0c-1 1-1 2-1 3H9c0-1 0-2-1-3Z"/>',
   book: '<path d="M12 6c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V5c-4-1-7-1-10 1ZM12 6v15"/>',
   refresh:
     '<path d="M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 13 3M5 15a8 8 0 0 0 13 3"/>',
@@ -43,8 +28,6 @@ const icons = {
   arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>',
   link: '<path d="m10 14 4-4M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0M16 8l1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" transform="translate(1 0) scale(.91)"/>',
   backlink: '<path d="m9 7-5 5 5 5M4 12h10a6 6 0 0 0 6-6V3"/>',
-  spark:
-    '<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>',
 };
 const icon = (name) =>
   `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${icons[name] || icons.file}</svg>`;
@@ -89,25 +72,18 @@ const kinds = {
 const state = {
   notes: [],
   selected: location.hash.startsWith("#doc:") ? location.hash.slice(5) : null,
-  category: "all",
-  domain: "",
-  tag: "",
   query: "",
   depth: 1,
   mode: "read",
   topics: [],
-  sort: "updated",
-  online: true,
   hovered: null,
   spacing: 210,
-  storage: "local",
 };
 const byId = (id) => state.notes.find((note) => note.id === id);
 const degree = (note) => new Set([...note.outgoing, ...note.incoming]).size;
-const kindPill = (kind) =>
-  `<span class="kind-pill kind-${kind}">${icon(kind)}${kinds[kind].label}</span>`;
 let toastTimer,
   searchTimer,
+  searchComposing = false,
   readerNoteId = null,
   detailNoteId = null;
 
@@ -148,115 +124,27 @@ async function api(path, options = {}) {
   }
   return data;
 }
-function syncStatus(online, message) {
-  state.online = online;
-  $("#sync-status").textContent = message;
-  $(".statusbar .status-dot").classList.toggle("offline", !online);
-}
-async function load(preferred, quiet = false) {
+async function load(preferred) {
   try {
     const data = await api("/api/notes");
     state.notes = data.notes;
     state.topics = WorkspaceNavigation.topics(state.notes, locale);
-    state.storage = data.storage || "local";
     $("#logout-button").hidden = !data.authenticated;
-    $("#refresh-button").title = t("reload_files", {
-      p0: state.storage === "server" ? t("text_server") : t("text_local"),
-    });
-    const allowed = filtered();
     const next = preferred || state.selected;
-    state.selected = allowed.some((note) => note.id === next)
-      ? next
-      : (allowed.find((note) => note.kind === "project") || allowed[0])?.id ||
-        null;
+    state.selected = byId(next)?.id || state.notes.find((note) => note.kind === "project")?.id || state.notes[0]?.id || null;
     updateDocumentURL("replace");
-    const samples = state.notes.filter((note) => note.sample).length;
-    $("#sample-status").textContent = samples
-      ? t("sample_count", { p0: samples })
-      : "";
-    syncStatus(
-      true,
-      t("sync_time", {
-        p0: state.storage === "server" ? t("text_server") : t("text_local"),
-        p1: new Date().toLocaleTimeString(locale, {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      }),
-    );
     render();
-    if (!quiet) return true;
+    if (document.activeElement === $("#search")) searchNotes();
+    return true;
   } catch (error) {
-    syncStatus(
-      false,
-      state.storage === "server"
-        ? t("text_connection_lost_refresh_to_retry")
-        : t("text_workspace_unavailable_refresh_to_retry"),
-    );
     notify(t("read_failed", { p0: error.message }), true);
-    $("#graph-status").textContent = t(
-      "text_connection_lost_refresh_to_retry_2",
-    );
+    $("#list-count").textContent = t("text_connection_lost_refresh_to_retry");
   }
 }
 function filtered() {
-  const query = state.query.toLocaleLowerCase();
-  return state.notes.filter(
-    (note) =>
-      (state.category === "all" || note.kind === state.category) &&
-      (!state.domain || note.category === state.domain) &&
-      (!state.tag || note.tags.includes(state.tag)) &&
-      (!query ||
-        `${note.title}\n${note.category || ""}\n${note.content}\n${note.tags.join(" ")}`
-          .toLocaleLowerCase()
-          .includes(query)),
-  );
-}
-function changeFilter() {
-  const notes = filtered();
-  if (!notes.some((note) => note.id === state.selected))
-    state.selected = notes[0]?.id || null;
-  updateDocumentURL("replace");
-  if (state.mode !== "graph") switchMode("list");
-  render();
+  return WorkspaceNavigation.searchNotes(state.notes, state.query);
 }
 function render() {
-  const edges = new Set(
-    state.notes.flatMap((note) =>
-      note.outgoing.map((id) => [note.id, id].sort().join("\0")),
-    ),
-  );
-  $("#note-count").textContent = state.notes.length;
-  $("#edge-count").textContent = edges.size;
-  const domains = [
-    ...new Set(state.notes.map((note) => note.category).filter(Boolean)),
-  ].sort((a, b) => a.localeCompare(b, locale));
-  $("#category-nav").innerHTML =
-    `<button class="nav-item ${state.category === "all" && !state.domain && !state.tag && !state.query ? "active" : ""}" data-category="all">${icon("files")}<span>${t("label_all_documents")}</span><span class="count">${state.notes.length}</span></button><div class="navigation-filters"><label><span class="sr-only">${t("category")}</span><select id="domain-filter" aria-label="${t("category")}"><option value="">${t("all_categories")}</option>${domains.map((domain) => `<option value="${escape(domain)}" ${state.domain === domain ? "selected" : ""}>${escape(categoryLabel(domain))}</option>`).join("")}</select></label><label><span class="sr-only">${t("label_type")}</span><select id="kind-filter" aria-label="${t("label_type")}"><option value="all">${t("all_types")}</option>${Object.entries(kinds).map(([id, info]) => `<option value="${id}" ${state.category === id ? "selected" : ""}>${info.label}</option>`).join("")}</select></label></div>`;
-  const tags = [...new Set(state.notes.flatMap((note) => note.tags))].sort(
-    (a, b) => a.localeCompare(b, locale),
-  );
-  $("#tags").innerHTML = tags.length
-    ? tags
-        .map(
-          (tag) =>
-            `<button class="tag-filter ${state.tag === tag ? "active" : ""}" data-tag="${escape(tag)}" aria-pressed="${state.tag === tag}"># ${escape(tag)}</button>`,
-        )
-        .join("")
-    : `<span class="relation-empty">${t("empty_tags")}</span>`;
-  $("#clear-tags").hidden = !state.tag;
-  const summary = [
-    state.category !== "all" && kinds[state.category].label,
-    state.domain,
-    state.tag && `# ${state.tag}`,
-    state.query && `“${state.query}”`,
-  ]
-    .filter(Boolean)
-    .join(" / ");
-  $("#filter-summary").textContent = summary;
-  $("#filter-summary").hidden = !summary;
-  $(".breadcrumb-slash").hidden = !summary;
-  updateViewTitle();
   renderTree();
   renderList();
   renderDetails();
@@ -269,21 +157,25 @@ function renderTree() {
   const tree = $("#file-tree");
   const scroll = tree.scrollTop;
   const folders = new Map($$(".tree-folder").map((folder) => [folder.dataset.folder, folder.open]));
-  const allowed = new Set(filtered().map((note) => note.id));
   tree.innerHTML = state.topics.map((topic) => {
-    const notes = topic.notes.filter((note) => allowed.has(note.id));
+    const notes = topic.notes;
     if (!notes.length) return "";
-    const open = state.query || notes.some((note) => note.id === state.selected) || folders.get(topic.key);
+    const open = notes.some((note) => note.id === state.selected) || folders.get(topic.key);
     const label = topic.key.startsWith("category:") ? categoryLabel(topic.label) : topic.label;
-    return `<details class="tree-folder" data-folder="${escape(topic.key)}" ${open ? "open" : ""}><summary>${icon("chevron-down")}${icon("folder")}<span>${escape(label)}</span><span class="count">${notes.length}</span></summary><div class="tree-files">${notes.map((note) => `<button class="tree-note ${note.id === state.selected ? "selected" : ""}" data-note="${escape(note.id)}" ${note.id === state.selected ? 'aria-current="page"' : ""} title="${escape(note.title)}">${icon("file")}<span>${escape(WorkspaceNavigation.compactTitle(note.title))}</span></button>`).join("")}</div></details>`;
+    return `<details class="tree-folder" data-folder="${escape(topic.key)}" ${open ? "open" : ""}><summary>${icon("chevron-down")}<span>${escape(label)}</span><span class="count">${notes.length}</span></summary><div class="tree-files">${notes.map((note) => `<button class="tree-note ${note.id === state.selected ? "selected" : ""}" data-note="${escape(note.id)}" ${note.id === state.selected ? 'aria-current="page"' : ""} title="${escape(note.title)}"><span>${escape(WorkspaceNavigation.compactTitle(note.title))}</span></button>`).join("")}</div></details>`;
   }).join("") || `<p class="tree-empty">${t("empty_list")}</p>`;
   tree.scrollTop = scroll;
+}
+function syncSidebar() {
+  const mobile = matchMedia("(max-width: 760px)").matches;
+  $("#toggle-sidebar").setAttribute("aria-expanded", mobile ? $("#workspace").classList.contains("mobile-sidebar-open") : !$("#workspace").classList.contains("sidebar-collapsed"));
 }
 function openInspector(open = true) {
   $("#workspace").classList.toggle("inspector-open", open);
   $("#toggle-inspector").setAttribute("aria-pressed", open);
   if (open && matchMedia("(max-width: 760px)").matches)
     $("#workspace").classList.remove("mobile-sidebar-open");
+  syncSidebar();
 }
 function updateDocumentURL(method) {
   const url = new URL(location.href);
@@ -296,19 +188,11 @@ function selectNote(id, historyMode = "push") {
   updateDocumentURL(historyMode);
   switchMode("read");
   $("#workspace").classList.remove("mobile-sidebar-open");
+  syncSidebar();
   if (matchMedia("(max-width: 1180px)").matches) openInspector(false);
-  if (!filtered().some((note) => note.id === id)) {
-    state.category = "all";
-    state.domain = "";
-    state.tag = "";
-    state.query = "";
-    $("#search").value = "";
-    render();
-  } else {
-    renderTree();
-    renderDetails();
-    renderList();
-  }
+  renderTree();
+  renderDetails();
+  renderList();
   $("#note-panel h1")?.focus({ preventScroll: true });
 }
 window.addEventListener("popstate", () => {
@@ -325,38 +209,55 @@ function prettyDate(value) {
         day: "2-digit",
       });
 }
-function plainPreview(content) {
-  return content
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/^#{1,6}\s+.*$/gm, "")
-    .replace(/\[\[([^\]]+)\]\]/g, "$1")
-    .replace(/[\n\r]+/g, " ")
-    .replace(/[*_`>#]/g, "")
-    .trim()
-    .slice(0, 150);
+function highlight(text) {
+  const terms = [...new Set(state.query.toLocaleLowerCase().split(/\s+/).filter(Boolean))];
+  if (!terms.length) return escape(text);
+  const lower = text.toLocaleLowerCase();
+  let result = "", offset = 0;
+  while (offset < text.length) {
+    let start = text.length, length = 0;
+    for (const term of terms) {
+      const index = lower.indexOf(term, offset);
+      if (index >= 0 && (index < start || (index === start && term.length > length))) {
+        start = index;
+        length = term.length;
+      }
+    }
+    result += escape(text.slice(offset, start));
+    if (!length) break;
+    result += `<mark>${escape(text.slice(start, start + length))}</mark>`;
+    offset = start + length;
+  }
+  return result;
 }
 function renderList() {
-  const notes = [...filtered()].sort((a, b) =>
-    state.sort === "title"
-      ? a.title.localeCompare(b.title, locale)
-      : state.sort === "links"
-        ? degree(b) - degree(a)
-        : (Date.parse(b.updated) || 0) - (Date.parse(a.updated) || 0),
-  );
+  const notes = filtered();
+  $("#list-heading").textContent = state.query ? t("search_results") : t("label_all_documents");
   $("#list-count").textContent = t("document_count", { p0: notes.length });
+  $("#clear-search").hidden = !$("#search").value;
   $("#note-list").innerHTML = notes.length
-    ? notes
-        .map(
-          (note) =>
-            `<button class="note-card ${note.id === state.selected ? "selected" : ""}" data-note="${escape(note.id)}"><div class="note-card-top">${kindPill(note.kind)}${note.sample ? `<span class="sample-label">${t("sample")}</span>` : ""}</div><h3>${escape(note.title)}</h3><p>${escape(plainPreview(note.content) || t("text_this_document_has_no_content_yet"))}</p><div class="note-card-bottom"><span>${escape(prettyDate(note.updated))}</span><span>${escape(
-              note.tags
-                .slice(0, 2)
-                .map((tag) => `#${tag}`)
-                .join(" "),
-            )}</span><span>${icon("link")}${t("connection_count", { count: degree(note) })}</span></div></button>`,
-        )
-        .join("")
-    : `<div class="list-empty">${t("empty_list")}</div>`;
+    ? notes.map((note) => `<button class="note-card" data-note="${escape(note.id)}"><h2>${highlight(WorkspaceNavigation.compactTitle(note.title))}</h2><p>${highlight(WorkspaceNavigation.preview(note.content || note.summary || "", state.query) || t("empty_content"))}</p></button>`).join("")
+    : `<div class="list-empty"><p>${state.notes.length ? t("empty_list") : t("empty_workspace")}</p>${state.query ? `<button class="text-button" data-clear-search>${t("clear_search")}</button>` : ""}</div>`;
+}
+function searchNotes() {
+  clearTimeout(searchTimer);
+  state.query = $("#search").value.trim();
+  switchMode("list");
+  renderList();
+  $("#workspace").classList.remove("mobile-sidebar-open");
+  syncSidebar();
+  $("#list-panel").scrollTop = 0;
+}
+function focusSearch() {
+  if ($("#reader-dialog").open) $("#reader-dialog").close();
+  $("#workspace-menu").open = false;
+  $("#search").focus();
+  $("#search").select();
+  searchNotes();
+}
+function clearSearch() {
+  $("#search").value = "";
+  focusSearch();
 }
 function resolveLink(target) {
   const normalized = target
@@ -538,8 +439,7 @@ function relationSection(ids, heading, symbol, collapsible = false) {
 function renderDetails() {
   const note = byId(state.selected);
   $("#fullscreen-note").disabled = !note;
-  $("#read-tab").disabled = !note;
-  $("#related-graph").disabled = !note;
+  $("#toggle-inspector").hidden = state.mode !== "read" || !note;
   if (!note) {
     detailNoteId = null;
     $("#note-panel").innerHTML =
@@ -554,12 +454,8 @@ function renderDetails() {
   $("#note-panel").innerHTML = `
     <div class="reading-document">
       <header class="detail-header">
-        <div class="note-classification">
-          ${note.category ? `<span class="domain-pill">${escape(categoryLabel(note.category))}</span>` : ""}
-          ${kindPill(note.kind)}
-        </div>
         <h1 tabindex="-1">${escape(note.title)}</h1>
-        <div class="detail-date">${t("updated_at", { date: escape(prettyDate(note.updated)) })}${note.sample ? `<span class="sample-label">${t("sample")}</span>` : ""}</div>
+        <div class="detail-date">${t("updated_at", { date: escape(prettyDate(note.updated)) })}</div>
         ${note.tags.length ? `<div class="detail-tags">${note.tags.map((tag) => `<button data-tag="${escape(tag)}"># ${escape(tag)}</button>`).join("")}</div>` : ""}
       </header>
       ${note.locale !== locale ? `<p class="reading-notice">${t("missing_translation")}</p>` : ""}
@@ -587,25 +483,23 @@ function renderReader() {
   if (!note) return;
   const changed = readerNoteId !== note.id;
   readerNoteId = note.id;
-  $("#reader-caption-title").textContent = note.title;
-  $("#reader-back-label").textContent =
-    t("back_to_reading");
   const tags = note.tags
     .map((tag) => `<span class="reader-tag"># ${escape(tag)}</span>`)
     .join("");
   $("#reader-content").innerHTML =
-    `<div class="reader-metadata">${note.category ? `<span class="domain-pill">${escape(note.category)}</span>` : ""}${kindPill(note.kind)}<span>${t("updated_at", { date: escape(prettyDate(note.updated)) })}</span>${note.sample ? `<span class="sample-label">${t("sample")}</span>` : ""}</div><h1 id="reader-heading">${escape(note.title)}</h1>${tags ? `<div class="reader-tags">${tags}</div>` : ""}<article class="detail-body reader-body">${note.html || markdown(note.content)}</article><footer class="reader-relations">${note.outgoing.length ? relationSection(note.outgoing, t("text_related_documents"), "link") : ""}${note.incoming.length ? relationSection(note.incoming, t("text_documents_referencing_this_one"), "backlink") : ""}</footer>`;
+    `<h1 id="reader-heading">${escape(note.title)}</h1>${tags ? `<div class="reader-tags">${tags}</div>` : ""}<article class="detail-body reader-body">${note.html || markdown(note.content)}</article><footer class="reader-relations">${note.outgoing.length ? relationSection(note.outgoing, t("text_related_documents"), "link") : ""}${note.incoming.length ? relationSection(note.incoming, t("text_documents_referencing_this_one"), "backlink") : ""}</footer>`;
   if (changed) $("#reader-scroll").scrollTop = 0;
 }
 function openReader() {
   if (!byId(state.selected)) return;
   renderReader();
+  $("#workspace-menu").open = false;
   if (!$("#reader-dialog").open) $("#reader-dialog").showModal();
 }
 $("#fullscreen-note").onclick = openReader;
 $("#close-reader").onclick = () => $("#reader-dialog").close();
 $("#reader-dialog").addEventListener("close", () =>
-  $("#fullscreen-note").focus(),
+  state.mode === "read" && $("#note-panel h1")?.focus({ preventScroll: true }),
 );
 $("#reader-content").onclick = (event) => {
   const link = event.target.closest("[data-note]");
@@ -629,7 +523,7 @@ function svgElement(name, attrs) {
   return node;
 }
 function visibleGraphNotes() {
-  const notes = filtered().filter((note) => note.channels.graph);
+  const notes = state.notes.filter((note) => note.channels.graph);
   if (!state.depth || !state.selected) return notes;
   const allowed = new Set(notes.map((note) => note.id)),
     visited = new Set([state.selected]);
@@ -962,95 +856,63 @@ new ResizeObserver(() => {
   }, 100);
 }).observe($("#graph-container"));
 
-function updateViewTitle() {
-  const topic = state.topics.find((group) => group.notes.some((note) => note.id === state.selected));
-  $("#page-title").textContent = state.mode === "graph"
-    ? t("label_graph")
-    : state.mode === "list"
-      ? t("label_all_documents")
-      : topic ? categoryLabel(topic.label) : t("label_notes");
-}
 function switchMode(mode) {
   state.mode = mode;
   $("#workspace").dataset.mode = mode;
-  for (const name of ["read", "list", "graph"]) {
-    $(`#${name}-panel`).hidden = mode !== name;
-    $(`#${name}-tab`).classList.toggle("active", mode === name);
-    $(`#${name}-tab`).setAttribute("aria-selected", mode === name);
-  }
-  $("#ribbon-graph").classList.toggle("active", mode === "graph");
-  $("#ribbon-list").classList.toggle("active", mode === "list");
-  updateViewTitle();
-  $("#settings-button").hidden = mode !== "graph";
-  if (mode !== "graph") {
-    cancelAnimationFrame(graphFrame);
-    $("#graph-settings").hidden = true;
-    $("#settings-button").setAttribute("aria-expanded", "false");
-  }
+  for (const name of ["read", "list", "graph"]) $(`#${name}-panel`).hidden = mode !== name;
+  $("#list-tab").classList.toggle("active", mode !== "graph");
+  $("#list-tab").setAttribute("aria-pressed", mode !== "graph");
+  $("#graph-tab").classList.toggle("active", mode === "graph");
+  $("#graph-tab").setAttribute("aria-pressed", mode === "graph");
+  $("#toggle-inspector").hidden = mode !== "read" || !byId(state.selected);
   if (mode === "graph") drawGraph();
+  else cancelAnimationFrame(graphFrame);
 }
-$("#read-tab").onclick = () => switchMode("read");
 $("#graph-tab").onclick = () => switchMode("graph");
-$("#list-tab").onclick = () => switchMode("list");
-$(".view-tabs").onkeydown = (event) => {
-  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-  const tabs = $$(".view-tab:not(:disabled)");
-  const current = tabs.indexOf(event.target);
-  if (current < 0) return;
-  event.preventDefault();
-  const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
-    : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
-  tabs[next].click();
-  tabs[next].focus();
-};
-$("#category-nav").onclick = (event) => {
-  const category = event.target.closest("[data-category]")?.dataset.category;
-  if (category) {
-    state.category = category;
-    if (category === "all") {
-      state.domain = "";
-      state.tag = "";
-      state.query = "";
-      $("#search").value = "";
-    }
-    changeFilter();
-  }
-};
-$("#category-nav").onchange = (event) => {
-  if (event.target.id === "domain-filter") {
-    state.domain = event.target.value;
-    changeFilter();
-  } else if (event.target.id === "kind-filter") {
-    state.category = event.target.value;
-    changeFilter();
-  }
+$("#list-tab").onclick = () => {
+  $("#search").value = "";
+  searchNotes();
 };
 function setTag(tag) {
-  state.tag = state.tag === tag ? "" : tag;
-  changeFilter();
+  $("#search").value = tag;
+  searchNotes();
 }
-$("#tags").onclick = (event) => {
-  const button = event.target.closest("[data-tag]");
-  if (button) setTag(button.dataset.tag);
-};
-$("#clear-tags").onclick = () => {
-  state.tag = "";
-  changeFilter();
-};
-$("#search").addEventListener("input", (event) => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => {
-    state.query = event.target.value.trim();
-    changeFilter();
-  }, 100);
+$("#search").addEventListener("focus", searchNotes);
+$("#search").addEventListener("compositionstart", () => { searchComposing = true; });
+$("#search").addEventListener("compositionend", () => {
+  searchComposing = false;
+  searchNotes();
 });
-$("#sort-order").onchange = (event) => {
-  state.sort = event.target.value;
-  renderList();
-};
+$("#search").addEventListener("input", () => {
+  $("#clear-search").hidden = !$("#search").value;
+  clearTimeout(searchTimer);
+  if (!searchComposing) searchTimer = setTimeout(searchNotes, 80);
+});
+$("#search").addEventListener("search", searchNotes);
+$("#clear-search").onclick = clearSearch;
+$("#search").addEventListener("keydown", (event) => {
+  if (event.isComposing || searchComposing) return;
+  if (event.key === "Enter" || event.key === "ArrowDown") {
+    event.preventDefault();
+    searchNotes();
+    const first = $("#note-list [data-note]");
+    if (event.key === "Enter" && first) selectNote(first.dataset.note);
+    else first?.focus();
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    $("#search").value = "";
+    state.query = "";
+    renderList();
+    if (byId(state.selected)) {
+      switchMode("read");
+      $("#note-panel h1")?.focus({ preventScroll: true });
+    }
+  }
+});
 $("#note-list").onclick = (event) => {
   const id = event.target.closest("[data-note]")?.dataset.note;
   if (id) selectNote(id);
+  else if (event.target.closest("[data-clear-search]")) clearSearch();
 };
 $$("[data-depth]").forEach(
   (button) =>
@@ -1060,12 +922,8 @@ $$("[data-depth]").forEach(
     }),
 );
 $("#refresh-button").onclick = async () => {
-  if (await load(state.selected))
-    notify(
-      t("reloaded", {
-        p0: state.storage === "server" ? t("text_server") : t("text_local"),
-      }),
-    );
+  $("#workspace-menu").open = false;
+  if (await load(state.selected)) notify(t("reloaded"));
 };
 $("#file-tree").onclick = (event) => {
   const id = event.target.closest("[data-note]")?.dataset.note;
@@ -1076,13 +934,11 @@ $("#toggle-sidebar").onclick = () => {
     openInspector(false);
     $("#workspace").classList.toggle("mobile-sidebar-open");
   } else $("#workspace").classList.toggle("sidebar-collapsed");
+  syncSidebar();
 };
 $("#toggle-inspector").onclick = () =>
   openInspector(!$("#workspace").classList.contains("inspector-open"));
 $("#close-inspector").onclick = () => openInspector(false);
-$("#ribbon-graph").onclick = () => switchMode("graph");
-$("#ribbon-list").onclick = () => switchMode("list");
-$("#ribbon-search").onclick = () => $("#search").focus();
 $("#logout-button").onclick = async () => {
   try {
     await api("/api/logout", { method: "POST", body: "{}" });
@@ -1090,11 +946,6 @@ $("#logout-button").onclick = async () => {
   } catch (error) {
     notify(error.message, true);
   }
-};
-$("#related-graph").onclick = () => {
-  state.depth = 1;
-  switchMode("graph");
-  if (matchMedia("(max-width: 1180px)").matches) openInspector(false);
 };
 $("#relation-panel").onclick = (event) => {
   const link = event.target.closest("[data-note]");
@@ -1107,20 +958,6 @@ $("#relation-panel").onclick = (event) => {
     if (matchMedia("(max-width: 1180px)").matches) openInspector(false);
   }
 };
-$("#settings-button").onclick = () => {
-  const panel = $("#graph-settings");
-  panel.hidden = !panel.hidden;
-  $("#settings-button").setAttribute("aria-expanded", !panel.hidden);
-};
-$("#colored-nodes").onchange = (event) =>
-  $("#graph-panel").classList.toggle("colored", event.target.checked);
-$("#show-edges").onchange = (event) =>
-  $("#graph-panel").classList.toggle("hide-edges", !event.target.checked);
-$("#node-spacing").oninput = (event) => {
-  state.spacing = Number(event.target.value);
-  positions.clear();
-  drawGraph();
-};
 $("#theme-button").onclick = () => {
   const dark = document.documentElement.classList.toggle("dark");
   localStorage.setItem("devgraph:theme", dark ? "dark" : "light");
@@ -1128,9 +965,10 @@ $("#theme-button").onclick = () => {
 if (localStorage.getItem("devgraph:theme") === "dark")
   document.documentElement.classList.add("dark");
 document.addEventListener("pointerdown", (event) => {
-  if (!event.target.closest("#graph-settings, #settings-button")) {
-    $("#graph-settings").hidden = true;
-    $("#settings-button").setAttribute("aria-expanded", "false");
+  if (!event.target.closest("#workspace-menu")) $("#workspace-menu").open = false;
+  if (matchMedia("(max-width: 760px)").matches && !event.target.closest("#sidebar, #toggle-sidebar")) {
+    $("#workspace").classList.remove("mobile-sidebar-open");
+    syncSidebar();
   }
 });
 
@@ -1156,26 +994,25 @@ document.addEventListener("click", (event) => {
   selectNote(anchor.getAttribute("href").slice(5));
 });
 
-$("#help-button").onclick = () => $("#help-dialog").showModal();
-$("#close-help").onclick = () => $("#help-dialog").close();
 document.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
-    if (!$$("dialog[open]").length) $("#search").focus();
+    focusSearch();
   }
-  if (
-    event.key === "?" &&
-    !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName) &&
-    !$$("dialog[open]").length
-  )
-    $("#help-dialog").showModal();
+  if (event.key === "Escape") {
+    $("#workspace-menu").open = false;
+    $("#workspace").classList.remove("mobile-sidebar-open");
+    syncSidebar();
+  }
 });
 if (!navigator.platform.toLowerCase().includes("mac")) {
   $("#search-shortcut").textContent = "Ctrl K";
 }
 const compactLayout = matchMedia("(max-width: 1180px)");
-openInspector(!compactLayout.matches);
+openInspector(false);
+syncSidebar();
 compactLayout.addEventListener("change", (event) => {
   if (event.matches) openInspector(false);
+  syncSidebar();
 });
 load();

@@ -210,7 +210,7 @@
   "ui.empty_tags": "No tags yet",
   "ui.empty_notes": "No documents yet",
   "ui.sample": "Example",
-  "ui.empty_list": "No matching documents.",
+  "ui.empty_list": "No matching notes.",
   "ui.empty_content": "No content yet.",
   "ui.empty_relations": "No connections yet.",
   "ui.filter_kind": "Filter {kind}",
@@ -269,5 +269,11 @@
   "ui.empty_workspace": "There are no notes in this knowledge base yet.",
   "ui.try_another_filter": "Try another keyword or clear the filters.",
   "ui.missing_reference": "The linked note is missing or its title is ambiguous",
-  "ui.unavailable_references": "Unavailable links"
+  "ui.unavailable_references": "Unavailable links",
+  "ui.search_all_notes": "Search all notes…",
+  "ui.clear_search": "Clear search",
+  "ui.search_results": "Search results",
+  "ui.outline_and_links": "Outline and links",
+  "ui.more_options": "More options",
+  "ui.related_scope": "Related"
 }

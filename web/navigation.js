@@ -43,5 +43,44 @@ globalThis.WorkspaceNavigation = (() => {
     return title.replace(/^.*?\s+(P\d{3,})[：:]\s*/, "$1 · ");
   }
 
-  return { topics, compactTitle };
+  function searchNotes(notes, query) {
+    const terms = [...new Set(query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean))];
+    return notes.map((note) => {
+      const fields = [note.title, note.tags.join(" "), note.summary || "", note.category || "", note.content].map((value) => value.toLocaleLowerCase());
+      let score = 0;
+      for (const term of terms) {
+        const weights = [12, 8, 4, 2, 1];
+        let matched = false;
+        fields.forEach((field, index) => {
+          if (field.includes(term)) {
+            matched = true;
+            score += weights[index];
+          }
+        });
+        if (!matched) return null;
+      }
+      return { note, score };
+    }).filter(Boolean).sort((a, b) =>
+      b.score - a.score || (Date.parse(b.note.updated) || 0) - (Date.parse(a.note.updated) || 0) || a.note.id.localeCompare(b.note.id),
+    ).map((hit) => hit.note);
+  }
+
+  function preview(content, query = "") {
+    const text = content
+      .replace(/^\s*```[^\n]*$/gm, "")
+      .replace(/\[\[([^\]]+)\]\]/g, (_, value) => value.includes("|") ? value.split("|").slice(1).join("|") : value.startsWith("doc:") ? "" : value)
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/^[\s]*#{1,6}\s+/gm, "")
+      .replace(/[*_`>#|]/g, "")
+      .replace(/\s+/g, " ").trim();
+    const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    const lower = text.toLocaleLowerCase();
+    const matches = terms.map((term) => lower.indexOf(term)).filter((index) => index >= 0);
+    const start = matches.length ? Math.max(0, Math.min(...matches) - 45) : 0;
+    const end = Math.min(text.length, start + 190);
+    return (start ? "…" : "") + text.slice(start, end) + (end < text.length ? "…" : "");
+  }
+
+  return { topics, compactTitle, searchNotes, preview };
 })();

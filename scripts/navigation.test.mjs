@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../web/navigation.js";
 
-const { topics, compactTitle } = globalThis.WorkspaceNavigation;
+const { topics, compactTitle, searchNotes, preview } = globalThis.WorkspaceNavigation;
 
 test("course-wide tags do not hide useful topics or duplicate documents", () => {
   const notes = [
@@ -45,4 +45,29 @@ test("compact course titles retain the lesson identity and actual subject", () =
   assert.equal(compactTitle("前端面试 P004：浅拷贝与深拷贝"), "P004 · 浅拷贝与深拷贝");
   assert.equal(compactTitle("JavaScript 函数传参"), "JavaScript 函数传参");
   assert.equal(compactTitle("An arbitrary title: unchanged"), "An arbitrary title: unchanged");
+});
+
+test("search ranks a title above a body mention and searches every metadata field", () => {
+  const notes = [
+    { id: "body", title: "课程目录", tags: [], content: "包含 Vue 响应式的参考资料。", updated: "2026-11-02" },
+    { id: "title", title: "Vue 响应式原理", tags: ["JavaScript"], content: "Proxy 拦截对象访问。", updated: "2026-10-01" },
+    { id: "summary", title: "其他笔记", summary: "Vue 组件", category: "前端", tags: ["状态管理"], content: "正文", updated: "2026-10-20" },
+  ];
+  const before = structuredClone(notes);
+  assert.deepEqual(searchNotes(notes, "VUE 响应式").map((note) => note.id), ["title", "body"]);
+  assert.deepEqual(searchNotes(notes, "前端 状态管理").map((note) => note.id), ["summary"]);
+  assert.deepEqual(searchNotes(notes, "vue 组件").map((note) => note.id), ["summary"]);
+  assert.deepEqual(searchNotes(notes, "Vue 不存在"), []);
+  assert.deepEqual(searchNotes(notes, "  ").map((note) => note.id), ["body", "summary", "title"]);
+  assert.deepEqual(notes, before);
+});
+
+test("search previews show the matching passage without Markdown links or opaque IDs", () => {
+  const body = "来源：[Vue 课程](https://example.com/long-link)\n\n" + "基础介绍。".repeat(90) + "关键结论：Proxy 会拦截对象的访问。[[doc:00000000-0000-0000-0000-000000000000|相关笔记]]";
+  const snippet = preview(body, "Proxy");
+  assert.ok(snippet.includes("Proxy 会拦截"));
+  assert.ok(snippet.startsWith("…"));
+  assert.ok(!snippet.includes("https://") && !snippet.includes("doc:"));
+  assert.equal(preview("来源：[课程](https://example.com) [[doc:00000000-0000-0000-0000-000000000000|相关笔记]]"), "来源：课程 相关笔记");
+  assert.ok(preview("```js\nconst value = 1;\n```").includes("const value = 1"));
 });
