@@ -6,7 +6,7 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "check": "npm run i18n:check && node --check web/app.js && node --check web/navigation.js && node --check web/editor-controls.js && node --check web/login.js && node --test scripts/navigation.test.mjs",
+    "check": "npm run i18n:check && node --check web/app.js && node --check web/navigation.js && node --check web/login.js && node --test scripts/navigation.test.mjs",
     "i18n:check": "node scripts/check-i18n.mjs",
     "test:backend": "cd backend && go test -tags=nomsgpack ./...",
     "build": "cd backend && go build -tags=nomsgpack -o bin/knowledge-graph ./cmd/server && go build -tags=nomsgpack -o bin/contentctl ./cmd/contentctl && go build -tags=nomsgpack -o bin/knowledge-mcp ./cmd/knowledge-mcp"

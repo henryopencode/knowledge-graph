@@ -4,6 +4,8 @@
 
 ## Architecture
 
+The password-protected browser interface is for viewing only. It provides topic navigation, search, filters, outlines, related notes, a graph, language selection and full-screen reading. Creation, editing, import, backup export, deletion and publication controls are absent, including missing-link creation and editing shortcuts. Content maintenance uses the existing authenticated content API or offline maintenance tools; published snapshots and credentials are preserved.
+
 This repository owns the private graph interface in `web/` and the Go/Gin content service. The Next.js blog is an independent project that reads published articles through the public API. The service exposes separate listeners: `127.0.0.1:8180` for public read-only APIs and `127.0.0.1:8181` for the authenticated workspace. The public listener never registers private routes.
 
 `henryweb.site/{locale}` serves the blog, `api.henryweb.site` serves public APIs, and `knowledge.henryweb.site` serves the workspace. Supported locales are `zh-CN`, `zh-TW`, and `en`. Old blog links redirect to Simplified Chinese. The old IP `/graph/` entry remains available.
@@ -31,7 +33,7 @@ updated: "2026-10-26T00:00:00Z"
 ---
 ```
 
-The editor creates metadata and IDs. `kind` is one of `project`, `incident`, `decision`, or `concept`. Category IDs and API enums are stable across locales. `notes` and `site` have localized display labels. Custom category labels are shown as authored.
+The content service creates metadata and IDs. `kind` is one of `project`, `incident`, `decision`, or `concept`. Category IDs and API enums are stable across locales. `notes` and `site` have localized display labels. Custom category labels are shown as authored.
 
 New documents are private and included in the graph by default. The blog and graph flags are independent. `<UUID>/document.json` stores the authoritative shared blog policy (`schema_version: 1`, `blog: true/false`). Markdown `channels.blog` remains a compatibility field; it cannot override the shared policy. Include this JSON file when backing up or moving a document. Documents excluded from the graph remain in the file tree and document list. Import creates private drafts and never publishes incoming Markdown automatically.
 
@@ -43,7 +45,7 @@ Saving changes only the working Markdown version. Enable blog publication, save,
 
 Public responses expose explicit fields, not raw frontmatter or private graph metadata. Private link targets and aliases are replaced by a neutral label. Private local paths are not exposed. Referenced `assets/` attachments are copied into the publication snapshot; subsequent edits remain private until republishing. HTML is sanitized. Whole-document visibility is the supported boundary; put confidential additions in a separate private document.
 
-Each language has its own Markdown title, summary, body, slug, and editing revision. Publication status is shared across the document. The publishing area has no language selector; choose a language inside the editor to author translations. A missing published translation displays the published original with a source-language notice, never a working draft. `locale` is the requested interface language, `content_locale` identifies the actual content, and `available_locales` lists real published translations. Every `translations` entry is a usable route, including fallback routes. `source_locale` and `source_revision` associate a translation with its source. Source edits mark that translation as potentially outdated. No automated replacement of private or authored content occurs. The language selector changes the interface, not the stored content.
+Each language has its own Markdown title, summary, body, slug, and editing revision. Publication status is shared across the document. Publication actions apply to the entire document; maintain each translation through the content API using its language code. A missing published translation displays the published original with a source-language notice, never a working draft. `locale` is the requested interface language, `content_locale` identifies the actual content, and `available_locales` lists real published translations. Every `translations` entry is a usable route, including fallback routes. `source_locale` and `source_revision` associate a translation with its source. Source edits mark that translation as potentially outdated. No automated replacement of private or authored content occurs. The language selector changes the interface, not the stored content.
 
 ## API and localization
 

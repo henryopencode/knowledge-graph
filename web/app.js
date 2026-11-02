@@ -16,7 +16,6 @@ const icons = {
   "chevron-down": '<path d="m6 9 6 6 6-6"/>',
   "folder-open": '<path d="M3 7V5h6l2 2h10v12H3V7Zm0 3h18"/>',
   folder: '<path d="M3 6h6l2 2h10v12H3V6Z"/>',
-  "file-plus": '<path d="M13 3H5v18h14V9l-6-6ZM13 3v6h6M9 15h6M12 12v6"/>',
   files: '<path d="M8 3h8l4 4v12H8V3ZM16 3v4h4M4 7v15h12"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16h.01"/>',
   moon: '<path d="M20.5 13.5A9 9 0 0 1 10.5 3.5a9 9 0 1 0 10 10Z"/>',
@@ -37,14 +36,10 @@ const icons = {
   concept:
     '<path d="M9 18h6M9 21h6M8 14a6 6 0 1 1 8 0c-1 1-1 2-1 3H9c0-1 0-2-1-3Z"/>',
   book: '<path d="M12 6c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V5c-4-1-7-1-10 1ZM12 6v15"/>',
-  import: '<path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/>',
-  download: '<path d="M12 3v11m-4-4 4 4 4-4M5 15v5h14v-5"/>',
   refresh:
     '<path d="M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 13 3M5 15a8 8 0 0 0 13 3"/>',
   fit: '<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>',
   file: '<path d="M14 2H5v20h14V7l-5-5ZM14 2v5h5M8 12h8M8 16h6"/>',
-  edit: '<path d="m15 4 5 5M4 20l5-1L21 7l-5-5L4 14l-1 7Z"/>',
-  trash: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/>',
   arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>',
   link: '<path d="m10 14 4-4M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0M16 8l1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" transform="translate(1 0) scale(.91)"/>',
   backlink: '<path d="m9 7-5 5 5 5M4 12h10a6 6 0 0 0 6-6V3"/>',
@@ -93,7 +88,6 @@ const kinds = {
 };
 const state = {
   notes: [],
-  templates: {},
   selected: location.hash.startsWith("#doc:") ? location.hash.slice(5) : null,
   category: "all",
   domain: "",
@@ -114,12 +108,8 @@ const kindPill = (kind) =>
   `<span class="kind-pill kind-${kind}">${icon(kind)}${kinds[kind].label}</span>`;
 let toastTimer,
   searchTimer,
-  editing = null,
-  confirmResolve = null,
-  draftSaved = false,
   readerNoteId = null,
-  detailNoteId = null,
-  importing = false;
+  detailNoteId = null;
 
 function notify(message, error = false) {
   const element = $("#toast");
@@ -168,13 +158,8 @@ async function load(preferred, quiet = false) {
     const data = await api("/api/notes");
     state.notes = data.notes;
     state.topics = WorkspaceNavigation.topics(state.notes, locale);
-    state.templates = data.templates;
     state.storage = data.storage || "local";
     $("#logout-button").hidden = !data.authenticated;
-    $("#editor-dialog .save-hint").innerHTML = t("save_location", {
-      p0: icon("file"),
-      p1: state.storage === "server" ? t("text_server") : t("text_local"),
-    });
     $("#refresh-button").title = t("reload_files", {
       p0: state.storage === "server" ? t("text_server") : t("text_local"),
     });
@@ -401,8 +386,9 @@ function inline(text) {
   safe = safe.replace(/(?<!!)\[\[([^\]\n]+)\]\]/g, (_, link) => {
     const [target, alias] = link.split("|");
     const found = resolveLink(target);
-    return stash(
-      `<button class="wiki-link ${found ? "" : "missing"}" ${found ? `data-note="${escape(found.id)}"` : `data-missing="${escape(target.split("#")[0].replace(/\.md$/, "").trim())}"`} title="${found ? t("text_open_related_document") : t("text_document_missing_or_ambiguous_select_to_create")}">${escape(alias || target)}</button>`,
+    return stash(found
+      ? `<button class="wiki-link" data-note="${escape(found.id)}" title="${t("text_open_related_document")}">${escape(alias || target)}</button>`
+      : `<span class="wiki-link missing" title="${t("missing_reference")}">${escape(alias || target)}</span>`,
     );
   });
   safe = safe.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, (_, label, href) => {
@@ -555,8 +541,9 @@ function renderDetails() {
   $("#read-tab").disabled = !note;
   $("#related-graph").disabled = !note;
   if (!note) {
+    detailNoteId = null;
     $("#note-panel").innerHTML =
-      `<div class="detail-placeholder">${icon("book")}<h2>${t("empty_selection")}</h2><p>${state.notes.length ? t("text_no_matching_documents_try_another_keyword") : t("text_create_a_document_to_begin")}</p><button data-action="new" class="button button-primary">${t("label_new_document")}</button></div>`;
+      `<div class="detail-placeholder">${icon("book")}<h2>${t("empty_selection")}</h2><p>${state.notes.length ? t("text_no_matching_documents_try_another_keyword") : t("empty_workspace")}</p></div>`;
     $("#relation-panel").innerHTML = "";
     if ($("#reader-dialog").open) $("#reader-dialog").close();
     return;
@@ -564,13 +551,32 @@ function renderDetails() {
   const changed = detailNoteId !== note.id;
   const scroll = changed ? 0 : $("#note-panel").scrollTop;
   detailNoteId = note.id;
-  $("#note-panel").innerHTML =
-    `<div class="reading-document"><header class="detail-header"><div class="detail-meta"><div class="note-classification">${note.category ? `<span class="domain-pill">${escape(categoryLabel(note.category))}</span>` : ""}${kindPill(note.kind)}</div><div class="detail-menu"><button class="button" data-action="edit">${icon("edit")}${t("label_edit_document")}</button></div></div><h1 tabindex="-1">${escape(note.title)}</h1><div class="detail-date">${t("updated_at", { date: escape(prettyDate(note.updated)) })}${note.sample ? `<span class="sample-label">${t("sample")}</span>` : ""}</div>${note.tags.length ? `<div class="detail-tags">${note.tags.map((tag) => `<button data-tag="${escape(tag)}"># ${escape(tag)}</button>`).join("")}</div>` : ""}</header>${note.locale !== locale ? `<p class="reading-notice">${t("missing_translation")}</p>` : ""}${note.translation_stale ? `<p class="reading-notice">${t("translation_stale")}</p>` : ""}<details class="document-options"><summary>${t("document_options")}${icon("chevron-down")}</summary>${WorkspaceEditor.publicationControls(note)}<div class="file-path">${icon("file")} documents/${escape(note.id)}/${note.locale}.md<button class="text-button" data-action="delete">${t("remove_document")}</button></div></details><article class="detail-body reader-body">${note.html || markdown(note.content)}</article><footer class="article-footer"><button class="button" data-action="related">${icon("link")}${t("text_related_documents")}</button></footer></div>`;
+  $("#note-panel").innerHTML = `
+    <div class="reading-document">
+      <header class="detail-header">
+        <div class="note-classification">
+          ${note.category ? `<span class="domain-pill">${escape(categoryLabel(note.category))}</span>` : ""}
+          ${kindPill(note.kind)}
+        </div>
+        <h1 tabindex="-1">${escape(note.title)}</h1>
+        <div class="detail-date">${t("updated_at", { date: escape(prettyDate(note.updated)) })}${note.sample ? `<span class="sample-label">${t("sample")}</span>` : ""}</div>
+        ${note.tags.length ? `<div class="detail-tags">${note.tags.map((tag) => `<button data-tag="${escape(tag)}"># ${escape(tag)}</button>`).join("")}</div>` : ""}
+      </header>
+      ${note.locale !== locale ? `<p class="reading-notice">${t("missing_translation")}</p>` : ""}
+      ${note.translation_stale ? `<p class="reading-notice">${t("translation_stale")}</p>` : ""}
+      <article class="detail-body reader-body">${note.html || markdown(note.content)}</article>
+      <footer class="article-footer"><button class="button" data-action="related">${icon("link")}${t("text_related_documents")}</button></footer>
+    </div>`;
   const headings = $$("#note-panel article h1, #note-panel article h2, #note-panel article h3");
   const outline = headings.length > 1
     ? `<nav class="document-outline" aria-label="${t("on_this_page")}"><h3>${t("on_this_page")}</h3>${headings.map((heading, index) => `<button data-outline="${index}" class="outline-level-${heading.tagName.toLowerCase()}">${escape(heading.textContent)}</button>`).join("")}</nav>`
     : "";
-  $("#relation-panel").innerHTML = `${outline}${relationSection(note.outgoing, t("text_links_to"), "link", true)}${relationSection(note.incoming, t("text_referenced_by"), "backlink", true)}${note.missing.length ? `<section class="relation-section"><h3 class="relation-heading">${t("missing_documents")}<span class="relation-count">${note.missing.length}</span></h3>${note.missing.map((title) => `<button class="relation-link" data-missing="${escape(title)}">${icon("plus")}<span>${escape(title)}</span></button>`).join("")}</section>` : ""}${note.ambiguous.length ? `<section class="relation-section"><p class="missing-note">${t("ambiguous_links", { titles: note.ambiguous.map(escape).join(", ") })}</p></section>` : ""}`;
+  $("#relation-panel").innerHTML = `
+    ${outline}
+    ${relationSection(note.outgoing, t("text_links_to"), "link", true)}
+    ${relationSection(note.incoming, t("text_referenced_by"), "backlink", true)}
+    ${note.missing.length ? `<section class="relation-section"><h3 class="relation-heading">${t("unavailable_references")}<span class="relation-count">${note.missing.length}</span></h3>${note.missing.map((title) => `<p class="relation-unavailable">${escape(title)}</p>`).join("")}</section>` : ""}
+    ${note.ambiguous.length ? `<section class="relation-section"><p class="missing-note">${t("ambiguous_links", { titles: note.ambiguous.map(escape).join(", ") })}</p></section>` : ""}`;
   $("#note-panel").scrollTop = scroll;
   if (changed) $("#relation-panel").scrollTop = 0;
   if ($("#reader-dialog").open) renderReader();
@@ -601,15 +607,9 @@ $("#close-reader").onclick = () => $("#reader-dialog").close();
 $("#reader-dialog").addEventListener("close", () =>
   $("#fullscreen-note").focus(),
 );
-$("#reader-edit").onclick = () => {
-  const note = byId(state.selected);
-  if (note) openEditor(note);
-};
 $("#reader-content").onclick = (event) => {
   const link = event.target.closest("[data-note]");
-  const missing = event.target.closest("[data-missing]");
   if (link) selectNote(link.dataset.note);
-  else if (missing) openEditor(null, missing.dataset.missing.split("/").pop());
 };
 
 const svgNS = "http://www.w3.org/2000/svg";
@@ -1098,10 +1098,8 @@ $("#related-graph").onclick = () => {
 };
 $("#relation-panel").onclick = (event) => {
   const link = event.target.closest("[data-note]");
-  const missing = event.target.closest("[data-missing]");
   const outline = event.target.closest("[data-outline]");
   if (link) selectNote(link.dataset.note);
-  else if (missing) openEditor(null, missing.dataset.missing.split("/").pop());
   else if (outline) {
     switchMode("read");
     const headings = $$("#note-panel article h1, #note-panel article h2, #note-panel article h3");
@@ -1136,359 +1134,28 @@ document.addEventListener("pointerdown", (event) => {
   }
 });
 
-function confirmAction(
-  message,
-  label = t("label_confirm"),
-  title = t("label_confirm_action"),
-) {
-  $("#confirm-heading").textContent = title;
-  $("#confirm-message").textContent = message;
-  $("#confirm-ok").textContent = label;
-  $("#confirm-dialog").showModal();
-  return new Promise((resolve) => (confirmResolve = resolve));
-}
-function finishConfirm(answer) {
-  $("#confirm-dialog").close();
-  confirmResolve?.(answer);
-  confirmResolve = null;
-}
-$("#confirm-ok").onclick = () => finishConfirm(true);
-$("#confirm-cancel").onclick = () => finishConfirm(false);
-$("#confirm-dialog").addEventListener("cancel", (event) => {
-  event.preventDefault();
-  finishConfirm(false);
-});
-function editorSnapshot() {
-  return [
-    $("#editor-title").value,
-    $("#editor-kind").value,
-    $("#editor-tags").value,
-    $("#editor-content").value,
-    JSON.stringify(WorkspaceEditor.metadata()),
-  ].join("\0");
-}
-let initialSnapshot = "";
-function openEditor(note = null, title = "") {
-  editing = note;
-  draftSaved = false;
-  $("#editor-heading").textContent = note
-    ? t("text_edit_document")
-    : t("label_new_document");
-  $("#editor-title").value = note?.title || title;
-  $("#editor-title").readOnly = false;
-  $("#editor-title").title = note
-    ? t("text_document_ids_keep_links_stable_when_titles_change")
-    : "";
-  $("#editor-kind").value =
-    note?.kind || (state.category === "all" ? "incident" : state.category);
-  $("#editor-tags").value = note?.tags.join(", ") || state.tag;
-  $("#editor-content").value =
-    note?.content ?? state.templates[$("#editor-kind").value] ?? "";
-  WorkspaceEditor.configure(note);
-  if (!note && state.domain) $("#editor-category").value = state.domain;
-  $("#editor-message").textContent = "";
-  $("#link-suggestions").hidden = true;
-  initialSnapshot = editorSnapshot();
-  $("#editor-dialog").showModal();
-  setTimeout(
-    () => (note || title ? $("#editor-content") : $("#editor-title")).focus(),
-    30,
-  );
-}
-async function closeEditor() {
-  if (
-    editorSnapshot() !== initialSnapshot &&
-    !draftSaved &&
-    !(await confirmAction(
-      t("text_you_have_unsaved_changes_close_without_saving"),
-      t("text_discard_changes"),
-      t("text_close_editor"),
-    ))
-  )
-    return;
-  $("#editor-dialog").close();
-  editing = null;
-}
-$("#new-button").onclick = () => openEditor();
-$("#empty-new-button").onclick = () => openEditor();
-$("#tree-new-button").onclick = () => openEditor();
-$("#close-editor").onclick = closeEditor;
-$("#cancel-editor").onclick = closeEditor;
-$("#editor-dialog").addEventListener("cancel", (event) => {
-  event.preventDefault();
-  closeEditor();
-});
-$("#editor-kind").onchange = () => {
-  if (
-    !editing &&
-    Object.values(state.templates).includes($("#editor-content").value)
-  )
-    $("#editor-content").value = state.templates[$("#editor-kind").value];
+$("#note-panel").onclick = (event) => {
+  const link = event.target.closest("[data-note]");
+  const tag = event.target.closest("[data-tag]");
+  if (link) selectNote(link.dataset.note);
+  else if (tag) setTag(tag.dataset.tag);
+  else if (event.target.closest('[data-action="related"]')) openInspector();
 };
-$("#apply-template").onclick = async () => {
-  if (
-    $("#editor-content").value.trim() &&
-    !(await confirmAction(
-      t(
-        "text_this_replaces_the_current_content_copy_anything_you_want_to_keep_",
-      ),
-      t("text_replace_with_template"),
-      t("text_insert_template"),
-    ))
-  )
-    return;
-  $("#editor-content").value = state.templates[$("#editor-kind").value];
-  updateSuggestions();
-};
-$("#editor-form").onsubmit = async (event) => {
-  event.preventDefault();
-  const button = $("#save-note");
-  button.disabled = true;
-  $("#editor-message").textContent = "";
-  const payload = {
-    ...WorkspaceEditor.metadata(),
-    title: $("#editor-title").value.trim(),
-    kind: $("#editor-kind").value,
-    tags: $("#editor-tags")
-      .value.split(/[,，]/)
-      .map((tag) => tag.trim().replace(/^#/, ""))
-      .filter(Boolean),
-    content: $("#editor-content").value,
-    ...(editing ? { version: editing.version } : {}),
-  };
-  try {
-    const note = await api(
-      editing ? `/api/notes/${encodeURIComponent(editing.id)}` : "/api/notes",
-      { method: editing ? "PUT" : "POST", body: JSON.stringify(payload) },
-    );
-    draftSaved = true;
-    $("#editor-dialog").close();
-    editing = null;
-    state.category = "all";
-    state.domain = "";
-    state.tag = "";
-    state.query = "";
-    $("#search").value = "";
-    await load(note.id);
-    switchMode("read");
-    notify(
-      t("saved", {
-        p0: state.storage === "server" ? t("text_server") : t("text_local"),
-      }),
-    );
-  } catch (error) {
-    $("#editor-message").textContent = error.message;
-  } finally {
-    button.disabled = false;
-  }
-};
-function updateSuggestions() {
-  const input = $("#editor-content"),
-    before = input.value.slice(0, input.selectionStart),
-    match = before.match(/\[\[([^\]\n]*)$/);
-  const area = $("#link-suggestions");
-  if (!match) {
-    area.hidden = true;
-    return;
-  }
-  const candidates = state.notes
-    .filter(
-      (note) =>
-        note.id !== editing?.id &&
-        note.title.toLocaleLowerCase().includes(match[1].toLocaleLowerCase()),
-    )
-    .slice(0, 5);
-  area.hidden = !candidates.length;
-  area.innerHTML = candidates
-    .map(
-      (note) =>
-        `<button type="button" data-insert="${escape(note.id)}">${kinds[note.kind].short} · ${escape(note.title)}</button>`,
-    )
-    .join("");
-}
-$("#editor-content").addEventListener("input", updateSuggestions);
-$("#editor-content").addEventListener("click", updateSuggestions);
-$("#link-suggestions").onclick = (event) => {
-  const id = event.target.closest("[data-insert]")?.dataset.insert,
-    note = byId(id);
-  if (!note) return;
-  const input = $("#editor-content"),
-    start = input.selectionStart,
-    before = input.value.slice(0, start),
-    match = before.match(/\[\[([^\]\n]*)$/);
-  if (!match) return;
 
-  const replacement = `[[doc:${note.id}|${note.title}]]`;
-  input.setRangeText(
-    replacement,
-    start - match[0].length,
-    start + (input.value.slice(start, start + 2) === "]]" ? 2 : 0),
-    "end",
-  );
-  input.focus();
-  $("#link-suggestions").hidden = true;
-};
-$("#note-panel").onclick = async (event) => {
-  const note = byId(state.selected),
-    link = event.target.closest("[data-note]"),
-    missing = event.target.closest("[data-missing]"),
-    tag = event.target.closest("[data-tag]"),
-    action = event.target.closest("[data-action]")?.dataset.action;
-  if (link) return selectNote(link.dataset.note);
-  if (missing)
-    return openEditor(null, missing.dataset.missing.split("/").pop());
-  if (tag) return setTag(tag.dataset.tag);
-  if (action === "new") return openEditor();
-  if (action === "related") return openInspector();
-  if (!note) return;
-  if (action === "edit") openEditor(note);
-  if (
-    action === "delete" &&
-    (await confirmAction(
-      t("remove_confirm", { p0: note.title }),
-      t("text_move_to_trash"),
-      t("text_remove_this_document"),
-    ))
-  ) {
-    try {
-      await api(`/api/notes/${encodeURIComponent(note.id)}`, {
-        method: "DELETE",
-        body: JSON.stringify({ version: note.version }),
-      });
-      await load();
-      notify(
-        t(
-          "text_moved_to_the_trash_directory_the_original_file_can_be_restored",
-        ),
-      );
-    } catch (error) {
-      notify(error.message, true);
-    }
-  }
-};
-function openImport() {
-  if (importing) return;
-  $("#import-message").textContent = "";
-  $("#import-progress").textContent = "";
-  $("#import-results").hidden = true;
-  $("#import-results").replaceChildren();
-  $("#import-done").textContent = t("label_close");
-  $("#import-dialog").showModal();
-}
-function closeImport() {
-  if (!importing) $("#import-dialog").close();
-}
-$("#import-button").onclick = openImport;
-$("#open-import").onclick = openImport;
-$("#close-import").onclick = closeImport;
-$("#import-done").onclick = closeImport;
-$("#import-dialog").addEventListener("cancel", (event) => {
-  if (importing) event.preventDefault();
+const workspaceLanguage = $("#workspace-language");
+workspaceLanguage.value = locale;
+workspaceLanguage.addEventListener("change", () => {
+  const url = new URL(location.href);
+  url.searchParams.set("locale", workspaceLanguage.value);
+  location.assign(url);
 });
-$("#import-dropzone").onclick = () => {
-  if (!importing) $("#import-files").click();
-};
-$("#import-files").onchange = async (event) => {
-  await importDocuments([...event.target.files]);
-  event.target.value = "";
-};
-const importDropzone = $("#import-dropzone");
-for (const type of ["dragenter", "dragover"])
-  importDropzone.addEventListener(type, (event) => {
-    event.preventDefault();
-    if (!importing) {
-      importDropzone.classList.add("drag-active");
-      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
-    }
-  });
-importDropzone.addEventListener("dragleave", (event) => {
-  if (!importDropzone.contains(event.relatedTarget))
-    importDropzone.classList.remove("drag-active");
-});
-importDropzone.addEventListener("drop", (event) => {
+document.addEventListener("click", (event) => {
+  const anchor = event.target.closest('a[href^="#doc:"]');
+  if (!anchor) return;
   event.preventDefault();
-  importDropzone.classList.remove("drag-active");
-  if (!importing) importDocuments([...event.dataTransfer.files]);
+  selectNote(anchor.getAttribute("href").slice(5));
 });
-async function importDocuments(files) {
-  if (!files.length || importing) return;
-  $("#import-message").textContent = "";
-  $("#import-results").hidden = true;
-  try {
-    if (files.some((file) => !/\.(md|markdown|txt)$/i.test(file.name)))
-      throw new Error(
-        t(
-          "text_supported_formats_md_markdown_txt_convert_pdf_or_word_files_first",
-        ),
-      );
-    if (files.length > 50 || files.some((file) => file.size > 512000))
-      throw new Error(
-        t("text_import_up_to_50_files_each_no_larger_than_500_kb"),
-      );
-    if (files.reduce((total, file) => total + file.size, 0) > 2000000)
-      throw new Error(
-        t("text_this_batch_exceeds_2_mb_split_it_into_smaller_batches"),
-      );
-    importing = true;
-    for (const id of ["import-dropzone", "close-import", "import-done"])
-      $(`#${id}`).disabled = true;
-    $("#import-progress").textContent = t("reading_files", {
-      p0: files.length,
-    });
-    const payload = {
-      files: await Promise.all(
-        files.map(async (file) => ({
-          name: file.name,
-          content: await file.text(),
-        })),
-      ),
-    };
-    const body = JSON.stringify(payload);
-    if (new Blob([body]).size > 2000000)
-      throw new Error(
-        t("text_the_request_exceeds_2_mb_split_it_into_smaller_batches"),
-      );
-    $("#import-progress").textContent = t("uploading_files", {
-      p0: files.length,
-    });
-    const result = await api("/api/import", { method: "POST", body });
-    state.category = "all";
-    state.domain = "";
-    state.tag = "";
-    state.query = "";
-    $("#search").value = "";
-    await load(result.imported[0]);
-    if (result.imported.length) switchMode("read");
-    if (result.errors.length) {
-      $("#import-progress").textContent = t("import_partial", {
-        p0: result.imported.length,
-        p1: result.errors.length,
-      });
-      $("#import-results").innerHTML =
-        `<ul>${result.errors.map((item) => `<li><strong>${escape(item.name)}</strong><span>${escape(item.error)}</span></li>`).join("")}</ul>`;
-      $("#import-results").hidden = false;
-      $("#import-done").textContent = t("text_done");
-    } else {
-      $("#import-dialog").close();
-      notify(
-        t("imported", {
-          p0: result.imported.length,
-          p1:
-            state.storage === "server"
-              ? t("text_server")
-              : t("text_local_workspace"),
-        }),
-      );
-    }
-  } catch (error) {
-    $("#import-message").textContent = error.message;
-    $("#import-progress").textContent = "";
-  } finally {
-    importing = false;
-    for (const id of ["import-dropzone", "close-import", "import-done"])
-      $(`#${id}`).disabled = false;
-  }
-}
+
 $("#help-button").onclick = () => $("#help-dialog").showModal();
 $("#close-help").onclick = () => $("#help-dialog").close();
 document.addEventListener("keydown", (event) => {
@@ -1497,34 +1164,14 @@ document.addEventListener("keydown", (event) => {
     if (!$$("dialog[open]").length) $("#search").focus();
   }
   if (
-    (event.metaKey || event.ctrlKey) &&
-    event.key === "Enter" &&
-    $("#editor-dialog").open &&
-    !$("#confirm-dialog").open
-  ) {
-    event.preventDefault();
-    if (!$("#save-note").disabled) $("#editor-form").requestSubmit();
-  }
-  if (
     event.key === "?" &&
     !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName) &&
     !$$("dialog[open]").length
   )
     $("#help-dialog").showModal();
 });
-window.addEventListener("beforeunload", (event) => {
-  if (
-    $("#editor-dialog").open &&
-    editorSnapshot() !== initialSnapshot &&
-    !draftSaved
-  ) {
-    event.preventDefault();
-    event.returnValue = "";
-  }
-});
 if (!navigator.platform.toLowerCase().includes("mac")) {
   $("#search-shortcut").textContent = "Ctrl K";
-  $(".key-hint").textContent = "Ctrl ↵";
 }
 const compactLayout = matchMedia("(max-width: 1180px)");
 openInspector(!compactLayout.matches);

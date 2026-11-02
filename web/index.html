@@ -10,7 +10,6 @@
     <script src="./i18n.js" defer></script>
     <script src="./navigation.js" defer></script>
     <script src="./app.js" defer></script>
-    <script src="./editor-controls.js" defer></script>
   </head>
   <body>
     <div id="workspace" class="app-shell inspector-open" data-mode="read">
@@ -48,14 +47,6 @@
         >
           <span data-icon="files"></span>
         </button>
-        <button
-          id="new-button"
-          class="ribbon-button"
-          title="{{t `label_new_document`}}"
-          aria-label="{{t `label_new_document`}}"
-        >
-          <span data-icon="edit"></span>
-        </button>
         <div class="ribbon-spacer"></div>
         <button
           id="logout-button"
@@ -86,36 +77,14 @@
       <aside class="sidebar" aria-label="{{t `label_workspace_files`}}">
         <div class="sidebar-top">
           <span>{{t `topics`}}</span>
-          <div>
-            <button
-              id="import-button"
-              class="icon-button"
-              title="{{t `label_import_markdown`}}"
-              aria-label="{{t `label_import_markdown`}}"
-            >
-              <span data-icon="import"></span></button
-            ><a
-              href="./api/export"
-              class="icon-button"
-              title="{{t `label_export_workspace`}}"
-              aria-label="{{t `label_download_workspace_backup`}}"
-              ><span data-icon="download"></span></a
-            ><button
-              id="tree-new-button"
-              class="icon-button"
-              title="{{t `label_new_document`}}"
-              aria-label="{{t `label_create_document_in_file_list`}}"
-            >
-              <span data-icon="file-plus"></span></button
-            ><button
-              id="refresh-button"
-              class="icon-button"
-              title="{{t `label_reload_documents`}}"
-              aria-label="{{t `label_refresh_workspace`}}"
-            >
-              <span data-icon="refresh"></span>
-            </button>
-          </div>
+          <button
+            id="refresh-button"
+            class="icon-button"
+            title="{{t `label_reload_documents`}}"
+            aria-label="{{t `label_refresh_workspace`}}"
+          >
+            <span data-icon="refresh"></span>
+          </button>
         </div>
         <nav
           id="category-nav"
@@ -214,16 +183,6 @@
               aria-label="{{t `label_search_workspace`}}"
             /><kbd id="search-shortcut">⌘ K</kbd></label
           ><button
-            id="open-import"
-            class="button toolbar-import"
-            aria-label="{{t `label_import_documents`}}"
-            title="{{t `label_import_documents`}}"
-          >
-            <span data-icon="import"></span
-            ><span class="toolbar-import-label"
-              >{{t `label_import_documents`}}</span
-            ></button
-          ><button
             id="settings-button"
             class="icon-button"
             aria-label="{{t `label_graph_settings`}}"
@@ -263,13 +222,9 @@
                 </g>
               </svg>
               <div id="graph-empty" class="graph-empty" hidden>
-                <span data-icon="graph"></span
-                ><strong>{{t `label_no_matching_documents`}}</strong
-                ><span
-                  >{{t `label_try_another_keyword_or_create_a_document`}}</span
-                ><button id="empty-new-button" class="button">
-                  {{t `label_new_document`}}
-                </button>
+                <span data-icon="graph"></span>
+                <strong>{{t `label_no_matching_documents`}}</strong>
+                <span>{{t `try_another_filter`}}</span>
               </div>
             </div>
             <div class="graph-topline">
@@ -430,209 +385,13 @@
           ><span id="reader-caption-title">{{t `label_document`}}</span></span
         >
         <div class="reader-toolbar-actions">
-          <kbd>{{t `label_esc_to_return`}}</kbd
-          ><button id="reader-edit" class="button">
-            <span data-icon="edit"></span>{{t `label_edit_document`}}
-          </button>
+          <kbd>{{t `label_esc_to_return`}}</kbd>
         </div>
       </header>
       <div id="reader-scroll" class="reader-scroll">
         <main id="reader-content" class="reader-content">
           <h1 id="reader-heading">{{t `label_document`}}</h1>
         </main>
-      </div>
-    </dialog>
-    <dialog
-      id="import-dialog"
-      class="import-dialog"
-      aria-labelledby="import-heading"
-    >
-      <div class="dialog-heading">
-        <div>
-          <h2 id="import-heading">{{t `label_import_documents`}}</h2>
-          <p class="import-intro">
-            {{t `label_import_existing_notes_and_connect_their_references`}}
-          </p>
-        </div>
-        <button
-          id="close-import"
-          class="icon-button"
-          aria-label="{{t `label_close_import`}}"
-        >
-          <span data-icon="close"></span>
-        </button>
-      </div>
-      <div class="import-content">
-        <button id="import-dropzone" class="import-dropzone" type="button">
-          <span data-icon="import"></span
-          ><strong>{{t `label_choose_files_or_drop_them_here`}}</strong
-          ><span
-            >{{t `label_markdown_md_markdown_or_plain_text_txt`}}</span
-          ></button
-        ><input
-          id="import-files"
-          type="file"
-          accept=".md,.markdown,.txt,text/markdown,text/plain"
-          multiple
-          hidden
-        />
-        <div class="import-limits">
-          <span>{{t `label_up_to_500_kb_per_file`}}</span
-          ><span>{{t `label_up_to_50_files_and_2_mb_per_batch`}}</span>
-        </div>
-        <p class="import-note">
-          {{t
-          `label_existing_documents_are_preserved_convert_pdf_or_word_files_to_mar`}}
-        </p>
-        <p
-          id="import-progress"
-          class="import-progress"
-          role="status"
-          aria-live="polite"
-        ></p>
-        <p id="import-message" class="form-message" role="alert"></p>
-        <div id="import-results" class="import-results" hidden></div>
-      </div>
-      <div class="dialog-footer">
-        <span class="save-hint"
-          ><span data-icon="link"></span>{{t
-          `label_use_doc_id_or_document_title_to_link_documents`}}</span
-        ><button id="import-done" class="button" type="button">
-          {{t `label_close`}}
-        </button>
-      </div>
-    </dialog>
-    <dialog
-      id="editor-dialog"
-      class="editor-dialog"
-      aria-labelledby="editor-heading"
-    >
-      <form id="editor-form">
-        <div class="dialog-heading">
-          <div><h2 id="editor-heading">{{t `label_new_document`}}</h2></div>
-          <button
-            type="button"
-            id="close-editor"
-            class="icon-button"
-            aria-label="{{t `label_close_editor`}}"
-          >
-            <span data-icon="close"></span>
-          </button>
-        </div>
-        <div class="editor-fields">
-          <label
-            >{{t `label_title_2`}}<input
-              id="editor-title"
-              required
-              maxlength="150"
-              placeholder="{{t `label_a_specific_problem_project_or_idea`}}"
-              autocomplete="off"
-          /></label>
-          <div class="field-row">
-            <label
-              >{{t `label_type`}}<select id="editor-kind">
-                <option value="incident">{{t `label_incident_review`}}</option>
-                <option value="project">{{t `label_project_context`}}</option>
-                <option value="decision">
-                  {{t `label_technical_decision`}}
-                </option>
-                <option value="concept">{{t `label_concept`}}</option>
-              </select></label
-            ><label
-              >{{t `label_tags`}}<span class="field-hint"
-                >{{t `label_separate_with_commas`}}</span
-              ><input
-                id="editor-tags"
-                placeholder="{{t `label_for_example_backend_nginx`}}"
-            /></label>
-          </div>
-          <div class="field-row">
-            <label
-              >{{t `document_language`}}<select id="editor-locale">
-                <option value="zh-CN">简体中文</option>
-                <option value="zh-TW">繁體中文</option>
-                <option value="en">English</option>
-              </select></label
-            ><label
-              >{{t `category`}}<input id="editor-category" placeholder="notes"
-            /></label>
-          </div>
-          <div class="channel-controls">
-            <label
-              ><input
-                type="checkbox"
-                id="editor-blog"
-                aria-controls="blog-fields"
-                aria-expanded="false"
-              />{{t `blog_visibility`}}</label
-            ><label
-              ><input type="checkbox" id="editor-graph" checked />{{t
-              `graph_visibility`}}</label
-            >
-          </div>
-          <section id="blog-fields" class="blog-fields" hidden>
-            <label
-              >{{t `summary`}}<input
-                id="editor-summary"
-                maxlength="2000" /></label
-            ><label
-              >{{t `slug`}}<input
-                id="editor-slug"
-                pattern="[a-z0-9][a-z0-9-]{0,119}"
-                placeholder="my-article"
-            /></label>
-          </section>
-          <div class="editor-body-label">
-            <label for="editor-content"
-              >{{t `label_content`}}
-              <span class="field-hint"
-                >{{t `label_markdown_doc_id_links_documents`}}</span
-              ></label
-            ><button type="button" id="apply-template" class="text-button">
-              {{t `label_insert_template`}}
-            </button>
-          </div>
-          <textarea
-            id="editor-content"
-            spellcheck="false"
-            aria-label="{{t `label_markdown_content`}}"
-          ></textarea>
-          <div id="link-suggestions" class="link-suggestions" hidden></div>
-          <button
-            type="button"
-            id="review-translation"
-            class="text-button"
-            hidden
-          >
-            {{t `review_translation`}}
-          </button>
-          <p id="editor-message" class="form-message" role="alert"></p>
-        </div>
-        <div class="dialog-footer">
-          <span class="save-hint sr-only"
-            ><span data-icon="file"></span>{{t `label_save_as_markdown`}}</span
-          ><button type="button" id="cancel-editor" class="button">
-            {{t `label_cancel`}}</button
-          ><button id="save-note" type="submit" class="button button-primary">
-            {{t `label_save_document`}}<span class="key-hint">⌘ ↵</span>
-          </button>
-        </div>
-      </form>
-    </dialog>
-    <dialog
-      id="confirm-dialog"
-      class="confirm-dialog"
-      aria-labelledby="confirm-heading"
-    >
-      <div class="dialog-heading">
-        <h2 id="confirm-heading">{{t `label_confirm_action`}}</h2>
-      </div>
-      <p id="confirm-message"></p>
-      <div class="confirm-actions">
-        <button id="confirm-cancel" class="button">{{t `label_cancel`}}</button
-        ><button id="confirm-ok" class="button button-primary">
-          {{t `label_confirm`}}
-        </button>
       </div>
     </dialog>
     <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-heading">
@@ -647,30 +406,6 @@
         </button>
       </div>
       <div class="help-content"><p>{{t `help_body`}}</p></div>
-    </dialog>
-    <dialog
-      id="preview-dialog"
-      class="reader-dialog"
-      aria-labelledby="preview-title"
-    >
-      <header class="reader-toolbar">
-        <h2 id="preview-title"></h2>
-        <button
-          id="close-preview"
-          class="icon-button"
-          aria-label="{{t `label_close`}}"
-        >
-          <span data-icon="close"></span>
-        </button>
-      </header>
-      <div id="preview-body" class="reader-content detail-body"></div>
-      <footer class="preview-footer">
-        <p id="preview-notice">{{t `preview_notice`}}</p>
-        <p id="preview-message" class="form-message" role="alert"></p>
-        <button id="publish-preview" class="button button-primary">
-          {{t `publish_to_blog`}}
-        </button>
-      </footer>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </body>

@@ -1,6 +1,6 @@
 # DevGraph · 知识图谱
 
-独立的 Markdown 知识库：Go/Gin 内容服务、SQLite 发布快照和浏览器图谱编辑器。支持简体中文、繁體中文、English。
+独立的 Markdown 知识库：Go/Gin 内容服务、SQLite 发布快照和需要密码登录的笔记阅读界面。支持简体中文、繁體中文、English。
 
 - [知识工作区](https://knowledge.henryweb.site)
 - [公开内容 API](https://api.henryweb.site)

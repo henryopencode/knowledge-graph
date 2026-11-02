@@ -138,7 +138,7 @@
   "ui.label_enter_your_username": "输入用户名",
   "ui.label_enter_your_password": "输入访问密码",
   "ui.help_heading": "使用指南",
-  "ui.help_body": "用 Markdown 记录内容，用 [[doc:ID]] 建立关联。博客与图谱展示可以独立设置。开启博客后，先预览再发布；保存只更新草稿。",
+  "ui.help_body": "在主题目录中选择笔记，或搜索标题、标签和正文。右侧目录可定位段落，关联笔记和图谱可用于继续浏览。支持切换语言、明暗主题和全屏阅读。",
   "ui.language": "语言",
   "ui.text_project": "项目",
   "ui.text_incident": "故障",
@@ -215,9 +215,9 @@
   "ui.empty_relations": "暂无关联。",
   "ui.filter_kind": "筛选{kind}",
   "ui.connection_count": "{count} 条关联",
-  "ui.empty_selection": "选择或新建一篇文档",
+  "ui.empty_selection": "请选择一篇笔记",
   "ui.missing_documents": "待建立的文档",
-  "ui.ambiguous_links": "名称不唯一：{titles}。请使用文档 ID 关联。",
+  "ui.ambiguous_links": "关联名称不唯一：{titles}。",
   "ui.updated_at": "更新于 {date}",
   "ui.remove_document": "移除文档",
   "ui.document_language": "文档语言",
@@ -265,5 +265,9 @@
   "ui.back_to_reading": "返回阅读",
   "ui.view_related_graph": "查看当前笔记的关联图谱",
   "ui.graph_visible_limit": "显示 {shown} / {total} 篇 · 搜索可缩小范围",
-  "ui.notes_view": "笔记"
+  "ui.notes_view": "笔记",
+  "ui.empty_workspace": "知识库暂无笔记。",
+  "ui.try_another_filter": "试试其他关键词，或清除筛选条件。",
+  "ui.missing_reference": "关联笔记不存在或名称不唯一",
+  "ui.unavailable_references": "未找到的关联"
 }

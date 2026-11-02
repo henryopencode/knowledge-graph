@@ -138,7 +138,7 @@
   "ui.label_enter_your_username": "輸入使用者名稱",
   "ui.label_enter_your_password": "輸入訪問密碼",
   "ui.help_heading": "使用指南",
-  "ui.help_body": "用 Markdown 記錄內容，用 [[doc:ID]] 建立關聯。博客與圖譜展示可以獨立設置。開啟博客後，先預覽再發布；儲存只更新草稿。",
+  "ui.help_body": "在主題目錄中選擇筆記，或搜尋標題、標籤和正文。右側目錄可定位段落，關聯筆記和圖譜可用於繼續瀏覽。支援切換語言、明暗主題和全螢幕閱讀。",
   "ui.language": "語言",
   "ui.text_project": "專案",
   "ui.text_incident": "故障",
@@ -215,9 +215,9 @@
   "ui.empty_relations": "暫無關聯。",
   "ui.filter_kind": "篩選{kind}",
   "ui.connection_count": "{count} 條關聯",
-  "ui.empty_selection": "選取或建立一篇文件",
+  "ui.empty_selection": "請選擇一篇筆記",
   "ui.missing_documents": "待建立的文件",
-  "ui.ambiguous_links": "名稱不唯一：{titles}。請使用文件 ID 關聯。",
+  "ui.ambiguous_links": "關聯名稱不唯一：{titles}。",
   "ui.updated_at": "更新於 {date}",
   "ui.remove_document": "移除文件",
   "ui.document_language": "文件語言",
@@ -265,5 +265,9 @@
   "ui.back_to_reading": "返回閱讀",
   "ui.view_related_graph": "查看目前筆記的關聯圖譜",
   "ui.graph_visible_limit": "顯示 {shown} / {total} 篇 · 搜尋可縮小範圍",
-  "ui.notes_view": "筆記"
+  "ui.notes_view": "筆記",
+  "ui.empty_workspace": "知識庫暫無筆記。",
+  "ui.try_another_filter": "試試其他關鍵詞，或清除篩選條件。",
+  "ui.missing_reference": "關聯筆記不存在或名稱不唯一",
+  "ui.unavailable_references": "未找到的關聯"
 }

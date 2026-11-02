@@ -138,7 +138,7 @@
   "ui.label_enter_your_username": "Enter your username",
   "ui.label_enter_your_password": "Enter your password",
   "ui.help_heading": "Workspace guide",
-  "ui.help_body": "Write in Markdown and link documents with [[doc:ID]]. Blog and graph visibility are independent. Preview before publishing; saving only updates the working draft.",
+  "ui.help_body": "Choose a note from the topic directory or search titles, tags and content. Use the page outline to jump to sections and follow related notes or the graph to explore. You can switch languages, themes and full-screen reading.",
   "ui.language": "Language",
   "ui.text_project": "Project",
   "ui.text_incident": "Incident",
@@ -215,9 +215,9 @@
   "ui.empty_relations": "No connections yet.",
   "ui.filter_kind": "Filter {kind}",
   "ui.connection_count": "{count} connections",
-  "ui.empty_selection": "Select or create a document",
+  "ui.empty_selection": "Select a note",
   "ui.missing_documents": "Unresolved documents",
-  "ui.ambiguous_links": "Ambiguous titles: {titles}. Use document IDs to link them.",
+  "ui.ambiguous_links": "Ambiguous linked titles: {titles}.",
   "ui.updated_at": "Updated {date}",
   "ui.remove_document": "Remove document",
   "ui.document_language": "Document language",
@@ -265,5 +265,9 @@
   "ui.back_to_reading": "Back to reading",
   "ui.view_related_graph": "View this note’s connections",
   "ui.graph_visible_limit": "Showing {shown} of {total} notes · Search to narrow the view",
-  "ui.notes_view": "Notes"
+  "ui.notes_view": "Notes",
+  "ui.empty_workspace": "There are no notes in this knowledge base yet.",
+  "ui.try_another_filter": "Try another keyword or clear the filters.",
+  "ui.missing_reference": "The linked note is missing or its title is ambiguous",
+  "ui.unavailable_references": "Unavailable links"
 }

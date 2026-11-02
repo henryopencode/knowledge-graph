@@ -87,6 +87,30 @@ func TestWorkspaceAuthenticationAndThreeLanguages(t *testing.T) {
 		if response.Code != 200 || !strings.Contains(response.Body.String(), "WorkspaceNavigation") {
 			t.Fatal("authenticated workspace cannot load navigation", response.Code)
 		}
+		// The browser surface is a reader in every language. Content management
+		// remains available through the existing authenticated API contract.
+		for _, language := range content.Locales {
+			request = httptest.NewRequest("GET", "/?locale="+language, nil)
+			request.AddCookie(cookies[0])
+			response = httptest.NewRecorder()
+			router.ServeHTTP(response, request)
+			page := response.Body.String()
+			if response.Code != 200 || !strings.Contains(page, `id="read-panel"`) || !strings.Contains(page, `id="graph-panel"`) || !strings.Contains(page, `id="search"`) {
+				t.Fatalf("reading UI unavailable in %s: %d", language, response.Code)
+			}
+			for _, control := range []string{`id="new-button"`, `id="editor-dialog"`, `id="import-dialog"`, `id="preview-dialog"`, `id="confirm-dialog"`, `id="reader-edit"`, `href="./api/export"`, "editor-controls.js", "<form"} {
+				if strings.Contains(page, control) {
+					t.Fatalf("content management control %q remains in %s reader", control, language)
+				}
+			}
+		}
+		request = httptest.NewRequest("GET", "/editor-controls.js", nil)
+		request.AddCookie(cookies[0])
+		response = httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+		if response.Code != 404 {
+			t.Fatal("retired editor script is still available", response.Code)
+		}
 		// Publishing and withdrawal require no language choice, including when
 		// the interface locale has no matching Markdown variant.
 		d, err := store.Write(context.Background(), "", content.WriteInput{Locale: "zh-CN", Title: "原文", Slug: "original", Content: "正文", Channels: &content.Channels{Blog: true, Graph: true}})
