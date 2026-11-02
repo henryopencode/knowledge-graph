@@ -47,6 +47,11 @@ func TestWorkspaceAuthenticationAndThreeLanguages(t *testing.T) {
 	if response.Code != 401 || !strings.Contains(response.Body.String(), "AUTH_REQUIRED") {
 		t.Fatal("private route is not protected", response.Body.String())
 	}
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest("GET", "/navigation.js", nil))
+	if response.Code != 401 {
+		t.Fatal("workspace navigation asset is not protected", response.Code)
+	}
 	for _, origin := range []string{"https://unrelated.example", "https://knowledge.henryweb.site"} {
 		payload, _ := json.Marshal(map[string]string{"username": "owner", "password": "test-password"})
 		request = httptest.NewRequest("POST", "/api/login?locale=en", bytes.NewReader(payload))
@@ -74,6 +79,13 @@ func TestWorkspaceAuthenticationAndThreeLanguages(t *testing.T) {
 		router.ServeHTTP(response, request)
 		if response.Code != 200 {
 			t.Fatal("authenticated private route unavailable", response.Body.String())
+		}
+		request = httptest.NewRequest("GET", "/navigation.js", nil)
+		request.AddCookie(cookies[0])
+		response = httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+		if response.Code != 200 || !strings.Contains(response.Body.String(), "WorkspaceNavigation") {
+			t.Fatal("authenticated workspace cannot load navigation", response.Code)
 		}
 		// Publishing and withdrawal require no language choice, including when
 		// the interface locale has no matching Markdown variant.

@@ -97,7 +97,7 @@ func NewWorkspace(config WorkspaceConfig) (*gin.Engine, error) {
 		}
 		c.Next()
 	})
-	for _, name := range []string{"app.js", "styles.css", "editor-controls.js"} {
+	for _, name := range []string{"app.js", "navigation.js", "styles.css", "editor-controls.js"} {
 		asset := name
 		protected.GET("/"+asset, func(c *gin.Context) { c.File(filepath.Join(config.AssetsDir, asset)) })
 	}

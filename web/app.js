@@ -96,13 +96,14 @@ const kinds = {
 const state = {
   notes: [],
   templates: {},
-  selected: null,
+  selected: location.hash.startsWith("#doc:") ? location.hash.slice(5) : null,
   category: "all",
   domain: "",
   tag: "",
   query: "",
-  depth: 0,
-  mode: "graph",
+  depth: 1,
+  mode: "read",
+  topics: [],
   sort: "updated",
   online: true,
   hovered: null,
@@ -119,6 +120,7 @@ let toastTimer,
   confirmResolve = null,
   draftSaved = false,
   readerNoteId = null,
+  detailNoteId = null,
   importing = false;
 
 function notify(message, error = false) {
@@ -167,6 +169,7 @@ async function load(preferred, quiet = false) {
   try {
     const data = await api("/api/notes");
     state.notes = data.notes;
+    state.topics = WorkspaceNavigation.topics(state.notes, locale);
     state.templates = data.templates;
     state.storage = data.storage || "local";
     $("#logout-button").hidden = !data.authenticated;
@@ -188,6 +191,7 @@ async function load(preferred, quiet = false) {
       ? next
       : (allowed.find((note) => note.kind === "project") || allowed[0])?.id ||
         null;
+    updateDocumentURL("replace");
     const samples = state.notes.filter((note) => note.sample).length;
     $("#sample-status").textContent = samples
       ? t("sample_count", { p0: samples })
@@ -234,6 +238,8 @@ function changeFilter() {
   const notes = filtered();
   if (!notes.some((note) => note.id === state.selected))
     state.selected = notes[0]?.id || null;
+  updateDocumentURL("replace");
+  if (state.mode !== "graph") switchMode("list");
   render();
 }
 function render() {
@@ -244,23 +250,11 @@ function render() {
   );
   $("#note-count").textContent = state.notes.length;
   $("#edge-count").textContent = edges.size;
-  const categories = [
-    ["all", t("label_all_documents"), "graph"],
-    ...Object.entries(kinds).map(([id, info]) => [id, info.label, id]),
-  ];
-  $("#category-nav").innerHTML = categories
-    .map(
-      ([id, label, symbol]) =>
-        `<button class="nav-item ${state.category === id ? "active" : ""}" data-category="${id}" aria-pressed="${state.category === id}">${icon(symbol)}<span>${label}</span><span class="count">${id === "all" ? state.notes.length : state.notes.filter((n) => n.kind === id).length}</span></button>`,
-    )
-    .join("");
   const domains = [
     ...new Set(state.notes.map((note) => note.category).filter(Boolean)),
   ].sort((a, b) => a.localeCompare(b, locale));
-  $("#category-nav").insertAdjacentHTML(
-    "beforeend",
-    `<label class="domain-filter">${t("category")}<select id="domain-filter" aria-label="${t("category")}"><option value="">${t("label_all_documents")}</option>${domains.map((domain) => `<option value="${escape(domain)}" ${state.domain === domain ? "selected" : ""}>${escape(domain)}</option>`).join("")}</select></label>`,
-  );
+  $("#category-nav").innerHTML =
+    `<button class="nav-item ${state.category === "all" && !state.domain && !state.tag && !state.query ? "active" : ""}" data-category="all">${icon("files")}<span>${t("label_all_documents")}</span><span class="count">${state.notes.length}</span></button><div class="navigation-filters"><label><span class="sr-only">${t("category")}</span><select id="domain-filter" aria-label="${t("category")}"><option value="">${t("all_categories")}</option>${domains.map((domain) => `<option value="${escape(domain)}" ${state.domain === domain ? "selected" : ""}>${escape(categoryLabel(domain))}</option>`).join("")}</select></label><label><span class="sr-only">${t("label_type")}</span><select id="kind-filter" aria-label="${t("label_type")}"><option value="all">${t("all_types")}</option>${Object.entries(kinds).map(([id, info]) => `<option value="${id}" ${state.category === id ? "selected" : ""}>${info.label}</option>`).join("")}</select></label></div>`;
   const tags = [...new Set(state.notes.flatMap((note) => note.tags))].sort(
     (a, b) => a.localeCompare(b, locale),
   );
@@ -274,9 +268,7 @@ function render() {
     : `<span class="relation-empty">${t("empty_tags")}</span>`;
   $("#clear-tags").hidden = !state.tag;
   const summary = [
-    state.category === "all"
-      ? t("label_all_documents")
-      : kinds[state.category].label,
+    state.category !== "all" && kinds[state.category].label,
     state.domain,
     state.tag && `# ${state.tag}`,
     state.query && `“${state.query}”`,
@@ -284,42 +276,49 @@ function render() {
     .filter(Boolean)
     .join(" / ");
   $("#filter-summary").textContent = summary;
-  $("#page-title").textContent =
-    state.category === "all"
-      ? t("label_knowledge_graph")
-      : kinds[state.category].label;
+  $("#filter-summary").hidden = !summary;
+  $(".breadcrumb-slash").hidden = !summary;
+  updateViewTitle();
   renderTree();
   renderList();
   renderDetails();
-  drawGraph();
+  if (state.mode === "graph") drawGraph();
+}
+function categoryLabel(category) {
+  return category === "notes" ? t("topic_notes") : category === "site" ? t("topic_site") : category;
 }
 function renderTree() {
-  const closed = new Set(
-    $$(".tree-folder:not([open])").map((folder) => folder.dataset.folder),
-  );
-  const names = {
-    project: t("text_01_projects"),
-    incident: t("text_02_incidents"),
-    decision: t("text_03_decisions"),
-    concept: t("text_04_concepts"),
-  };
-  $("#file-tree").innerHTML = Object.keys(kinds)
-    .map((kind) => {
-      const notes = state.notes
-        .filter((note) => note.kind === kind)
-        .sort((a, b) => a.title.localeCompare(b.title, locale));
-      return `<details class="tree-folder" data-folder="${kind}" ${closed.has(kind) ? "" : "open"}><summary>${icon("chevron-down")}${icon("folder")}<span>${names[kind]}</span><button class="count tree-kind-filter ${state.category === kind ? "active" : ""}" data-kind-filter="${kind}" title="${t("filter_kind", { kind: kinds[kind].label })}" aria-label="${t("filter_kind", { kind: kinds[kind].label })}" aria-pressed="${state.category === kind}">${notes.length}</button></summary><div class="tree-files">${notes.map((note) => `<button class="tree-note ${note.id === state.selected ? "selected" : ""}" data-note="${escape(note.id)}" title="${escape(note.title)}${note.sample ? t("text_example") : ""}">${icon("file")}<span>${escape(note.title)}</span></button>`).join("") || `<span class="relation-empty">${t("empty_notes")}</span>`}</div></details>`;
-    })
-    .join("");
+  const tree = $("#file-tree");
+  const scroll = tree.scrollTop;
+  const folders = new Map($$(".tree-folder").map((folder) => [folder.dataset.folder, folder.open]));
+  const allowed = new Set(filtered().map((note) => note.id));
+  tree.innerHTML = state.topics.map((topic) => {
+    const notes = topic.notes.filter((note) => allowed.has(note.id));
+    if (!notes.length) return "";
+    const open = state.query || notes.some((note) => note.id === state.selected) || folders.get(topic.key);
+    const label = topic.key.startsWith("category:") ? categoryLabel(topic.label) : topic.label;
+    return `<details class="tree-folder" data-folder="${escape(topic.key)}" ${open ? "open" : ""}><summary>${icon("chevron-down")}${icon("folder")}<span>${escape(label)}</span><span class="count">${notes.length}</span></summary><div class="tree-files">${notes.map((note) => `<button class="tree-note ${note.id === state.selected ? "selected" : ""}" data-note="${escape(note.id)}" ${note.id === state.selected ? 'aria-current="page"' : ""} title="${escape(note.title)}">${icon("file")}<span>${escape(WorkspaceNavigation.compactTitle(note.title))}</span></button>`).join("")}</div></details>`;
+  }).join("") || `<p class="tree-empty">${t("empty_list")}</p>`;
+  tree.scrollTop = scroll;
 }
 function openInspector(open = true) {
   $("#workspace").classList.toggle("inspector-open", open);
   $("#toggle-inspector").setAttribute("aria-pressed", open);
+  if (open && matchMedia("(max-width: 760px)").matches)
+    $("#workspace").classList.remove("mobile-sidebar-open");
 }
-function selectNote(id) {
+function updateDocumentURL(method) {
+  const url = new URL(location.href);
+  url.hash = state.selected ? `doc:${state.selected}` : "";
+  if (url.href !== location.href) history[method === "push" ? "pushState" : "replaceState"](null, "", url);
+}
+function selectNote(id, historyMode = "push") {
   if (!byId(id)) return;
   state.selected = id;
-  openInspector();
+  updateDocumentURL(historyMode);
+  switchMode("read");
+  $("#workspace").classList.remove("mobile-sidebar-open");
+  if (matchMedia("(max-width: 1180px)").matches) openInspector(false);
   if (!filtered().some((note) => note.id === id)) {
     state.category = "all";
     state.domain = "";
@@ -331,10 +330,13 @@ function selectNote(id) {
     renderTree();
     renderDetails();
     renderList();
-    if (state.depth) drawGraph();
-    else highlightGraph();
   }
+  $("#note-panel h1")?.focus({ preventScroll: true });
 }
+window.addEventListener("popstate", () => {
+  const id = location.hash.startsWith("#doc:") ? location.hash.slice(5) : null;
+  if (id && byId(id)) selectNote(id, "replace");
+});
 function prettyDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -547,21 +549,37 @@ function markdown(content) {
     result.join("") || `<p class="relation-empty">${t("empty_content")}</p>`
   );
 }
-function relationSection(ids, heading, symbol) {
+function relationSection(ids, heading, symbol, collapsible = false) {
   const notes = [...new Set(ids)].map(byId).filter(Boolean);
-  return `<section class="relation-section"><div class="relation-heading">${icon(symbol)}${heading}<span class="relation-count">${notes.length}</span></div>${notes.length ? notes.map((note) => `<button class="relation-link" data-note="${escape(note.id)}"><span class="relation-dot dot-${note.kind}"></span>${escape(note.title)}${icon("arrow")}</button>`).join("") : `<p class="relation-empty">${t("empty_relations")}</p>`}</section>`;
+  const grouped = collapsible && notes.length > 8;
+  const wrapper = grouped ? "details" : "section";
+  const title = grouped ? "summary" : "h3";
+  return `<${wrapper} class="relation-section ${grouped ? "relation-group" : ""}"><${title} class="relation-heading">${icon(symbol)}${heading}<span class="relation-count">${notes.length}</span>${grouped ? icon("chevron-down") : ""}</${title}>${notes.length ? notes.map((note) => `<button class="relation-link" data-note="${escape(note.id)}" title="${escape(note.title)}"><span class="relation-dot dot-${note.kind}"></span><span>${escape(WorkspaceNavigation.compactTitle(note.title))}</span>${icon("arrow")}</button>`).join("") : `<p class="relation-empty">${t("empty_relations")}</p>`}</${wrapper}>`;
 }
 function renderDetails() {
   const note = byId(state.selected);
   $("#fullscreen-note").disabled = !note;
+  $("#read-tab").disabled = !note;
+  $("#related-graph").disabled = !note;
   if (!note) {
     $("#note-panel").innerHTML =
       `<div class="detail-placeholder">${icon("book")}<h2>${t("empty_selection")}</h2><p>${state.notes.length ? t("text_no_matching_documents_try_another_keyword") : t("text_create_a_document_to_begin")}</p><button data-action="new" class="button button-primary">${t("label_new_document")}</button></div>`;
+    $("#relation-panel").innerHTML = "";
     if ($("#reader-dialog").open) $("#reader-dialog").close();
     return;
   }
+  const changed = detailNoteId !== note.id;
+  const scroll = changed ? 0 : $("#note-panel").scrollTop;
+  detailNoteId = note.id;
   $("#note-panel").innerHTML =
-    `<div class="detail-header"><div class="detail-meta"><div class="note-classification">${note.category ? `<span class="domain-pill">${escape(note.category)}</span>` : ""}${kindPill(note.kind)}</div><div class="detail-menu"><button class="icon-button" data-action="edit" title="${t("text_edit_document")}" aria-label="${t("text_edit_document")}">${icon("edit")}</button><button class="icon-button" data-action="delete" title="${t("text_move_to_trash")}" aria-label="${t("remove_document")}">${icon("trash")}</button></div></div><h2>${escape(note.title)}</h2><div class="detail-date">${t("updated_at", { date: escape(prettyDate(note.updated)) })}${note.sample ? `<span class="sample-label">${t("sample")}</span>` : ""}</div><div class="detail-tags">${note.tags.map((tag) => `<button data-tag="${escape(tag)}"># ${escape(tag)}</button>`).join("")}</div></div>${WorkspaceEditor.publicationControls(note)}<article class="detail-body">${note.html || markdown(note.content)}</article>${relationSection(note.outgoing, t("text_links_to"), "link")}${relationSection(note.incoming, t("text_referenced_by"), "backlink")}${note.missing.length ? `<section class="relation-section"><div class="relation-heading">${t("missing_documents")}<span class="relation-count">${note.missing.length}</span></div>${note.missing.map((title) => `<button class="relation-link" data-missing="${escape(title)}">${icon("plus")}${escape(title)}</button>`).join("")}</section>` : ""}${note.ambiguous.length ? `<section class="relation-section"><p class="missing-note">${t("ambiguous_links", { titles: note.ambiguous.map(escape).join(", ") })}</p></section>` : ""}<div class="file-path">${icon("file")} documents/${escape(note.id)}/${note.locale}.md</div>`;
+    `<div class="reading-document"><header class="detail-header"><div class="detail-meta"><div class="note-classification">${note.category ? `<span class="domain-pill">${escape(categoryLabel(note.category))}</span>` : ""}${kindPill(note.kind)}</div><div class="detail-menu"><button class="button" data-action="edit">${icon("edit")}${t("label_edit_document")}</button></div></div><h1 tabindex="-1">${escape(note.title)}</h1><div class="detail-date">${t("updated_at", { date: escape(prettyDate(note.updated)) })}${note.sample ? `<span class="sample-label">${t("sample")}</span>` : ""}</div>${note.tags.length ? `<div class="detail-tags">${note.tags.map((tag) => `<button data-tag="${escape(tag)}"># ${escape(tag)}</button>`).join("")}</div>` : ""}</header>${note.locale !== locale ? `<p class="reading-notice">${t("missing_translation")}</p>` : ""}${note.translation_stale ? `<p class="reading-notice">${t("translation_stale")}</p>` : ""}<details class="document-options"><summary>${t("document_options")}${icon("chevron-down")}</summary>${WorkspaceEditor.publicationControls(note)}<div class="file-path">${icon("file")} documents/${escape(note.id)}/${note.locale}.md<button class="text-button" data-action="delete">${t("remove_document")}</button></div></details><article class="detail-body reader-body">${note.html || markdown(note.content)}</article><footer class="article-footer"><button class="button" data-action="related">${icon("link")}${t("text_related_documents")}</button></footer></div>`;
+  const headings = $$("#note-panel article h1, #note-panel article h2, #note-panel article h3");
+  const outline = headings.length > 1
+    ? `<nav class="document-outline" aria-label="${t("on_this_page")}"><h3>${t("on_this_page")}</h3>${headings.map((heading, index) => `<button data-outline="${index}" class="outline-level-${heading.tagName.toLowerCase()}">${escape(heading.textContent)}</button>`).join("")}</nav>`
+    : "";
+  $("#relation-panel").innerHTML = `${outline}${relationSection(note.outgoing, t("text_links_to"), "link", true)}${relationSection(note.incoming, t("text_referenced_by"), "backlink", true)}${note.missing.length ? `<section class="relation-section"><h3 class="relation-heading">${t("missing_documents")}<span class="relation-count">${note.missing.length}</span></h3>${note.missing.map((title) => `<button class="relation-link" data-missing="${escape(title)}">${icon("plus")}<span>${escape(title)}</span></button>`).join("")}</section>` : ""}${note.ambiguous.length ? `<section class="relation-section"><p class="missing-note">${t("ambiguous_links", { titles: note.ambiguous.map(escape).join(", ") })}</p></section>` : ""}`;
+  $("#note-panel").scrollTop = scroll;
+  if (changed) $("#relation-panel").scrollTop = 0;
   if ($("#reader-dialog").open) renderReader();
 }
 
@@ -572,9 +590,7 @@ function renderReader() {
   readerNoteId = note.id;
   $("#reader-caption-title").textContent = note.title;
   $("#reader-back-label").textContent =
-    state.mode === "list"
-      ? t("text_back_to_documents")
-      : t("label_back_to_graph");
+    t("back_to_reading");
   const tags = note.tags
     .map((tag) => `<span class="reader-tag"># ${escape(tag)}</span>`)
     .join("");
@@ -641,16 +657,18 @@ function visibleGraphNotes() {
   return notes.filter((note) => visited.has(note.id));
 }
 function drawGraph() {
+  if (state.mode !== "graph") return;
   cancelAnimationFrame(graphFrame);
   width = $("#graph-container").clientWidth || 600;
   height = $("#graph-container").clientHeight || 480;
   graph.setAttribute("viewBox", `0 0 ${width} ${height}`);
   const visible = visibleGraphNotes(),
-    notes = visible.slice(0, 120);
+    limit = state.depth ? 30 : 120,
+    notes = [...visible].sort((a, b) => Number(b.id === state.selected) - Number(a.id === state.selected)).slice(0, limit);
   $("#graph-empty").hidden = notes.length !== 0;
   $("#graph-status").textContent =
-    visible.length > 120
-      ? t("graph_limit", { p0: visible.length })
+    visible.length > limit
+      ? t("graph_visible_limit", { shown: limit, total: visible.length })
       : state.depth
         ? t("graph_depth", { p0: notes.length, p1: state.depth })
         : t("graph_count", { p0: notes.length });
@@ -709,8 +727,8 @@ function drawGraph() {
       y: node.radius + (degree(note) >= 7 ? 27 : 21),
       "text-anchor": "middle",
     });
-    label.textContent =
-      note.title.length > 16 ? note.title.slice(0, 15) + "…" : note.title;
+    const titleText = WorkspaceNavigation.compactTitle(note.title);
+    label.textContent = titleText.length > 25 ? titleText.slice(0, 24) + "…" : titleText;
     group.append(label);
     node.element = group;
     nodeRoot.append(group);
@@ -951,30 +969,66 @@ new ResizeObserver(() => {
   }, 100);
 }).observe($("#graph-container"));
 
+function updateViewTitle() {
+  const topic = state.topics.find((group) => group.notes.some((note) => note.id === state.selected));
+  $("#page-title").textContent = state.mode === "graph"
+    ? t("label_graph")
+    : state.mode === "list"
+      ? t("label_all_documents")
+      : topic ? categoryLabel(topic.label) : t("label_notes");
+}
 function switchMode(mode) {
   state.mode = mode;
-  for (const name of ["graph", "list"]) {
+  $("#workspace").dataset.mode = mode;
+  for (const name of ["read", "list", "graph"]) {
     $(`#${name}-panel`).hidden = mode !== name;
     $(`#${name}-tab`).classList.toggle("active", mode === name);
     $(`#${name}-tab`).setAttribute("aria-selected", mode === name);
   }
   $("#ribbon-graph").classList.toggle("active", mode === "graph");
   $("#ribbon-list").classList.toggle("active", mode === "list");
+  updateViewTitle();
+  $("#settings-button").hidden = mode !== "graph";
+  if (mode !== "graph") {
+    cancelAnimationFrame(graphFrame);
+    $("#graph-settings").hidden = true;
+    $("#settings-button").setAttribute("aria-expanded", "false");
+  }
   if (mode === "graph") drawGraph();
 }
+$("#read-tab").onclick = () => switchMode("read");
 $("#graph-tab").onclick = () => switchMode("graph");
 $("#list-tab").onclick = () => switchMode("list");
+$(".view-tabs").onkeydown = (event) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const tabs = $$(".view-tab:not(:disabled)");
+  const current = tabs.indexOf(event.target);
+  if (current < 0) return;
+  event.preventDefault();
+  const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
+    : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+  tabs[next].click();
+  tabs[next].focus();
+};
 $("#category-nav").onclick = (event) => {
   const category = event.target.closest("[data-category]")?.dataset.category;
   if (category) {
     state.category = category;
-    if (category === "all") state.domain = "";
+    if (category === "all") {
+      state.domain = "";
+      state.tag = "";
+      state.query = "";
+      $("#search").value = "";
+    }
     changeFilter();
   }
 };
 $("#category-nav").onchange = (event) => {
   if (event.target.id === "domain-filter") {
     state.domain = event.target.value;
+    changeFilter();
+  } else if (event.target.id === "kind-filter") {
+    state.category = event.target.value;
     changeFilter();
   }
 };
@@ -1021,20 +1075,14 @@ $("#refresh-button").onclick = async () => {
     );
 };
 $("#file-tree").onclick = (event) => {
-  const category =
-    event.target.closest("[data-kind-filter]")?.dataset.kindFilter;
-  if (category) {
-    event.preventDefault();
-    state.category = state.category === category ? "all" : category;
-    return changeFilter();
-  }
   const id = event.target.closest("[data-note]")?.dataset.note;
   if (id) selectNote(id);
 };
 $("#toggle-sidebar").onclick = () => {
-  if (matchMedia("(max-width: 540px)").matches)
+  if (matchMedia("(max-width: 760px)").matches) {
+    openInspector(false);
     $("#workspace").classList.toggle("mobile-sidebar-open");
-  else $("#workspace").classList.toggle("sidebar-collapsed");
+  } else $("#workspace").classList.toggle("sidebar-collapsed");
 };
 $("#toggle-inspector").onclick = () =>
   openInspector(!$("#workspace").classList.contains("inspector-open"));
@@ -1050,16 +1098,24 @@ $("#logout-button").onclick = async () => {
     notify(error.message, true);
   }
 };
-function inspectorMode(mode) {
-  $("#inspector").classList.toggle("links-mode", mode === "links");
-  for (const name of ["note", "links"]) {
-    const active = mode === name;
-    $(`#inspector-${name}-tab`).classList.toggle("active", active);
-    $(`#inspector-${name}-tab`).setAttribute("aria-selected", active);
+$("#related-graph").onclick = () => {
+  state.depth = 1;
+  switchMode("graph");
+  if (matchMedia("(max-width: 1180px)").matches) openInspector(false);
+};
+$("#relation-panel").onclick = (event) => {
+  const link = event.target.closest("[data-note]");
+  const missing = event.target.closest("[data-missing]");
+  const outline = event.target.closest("[data-outline]");
+  if (link) selectNote(link.dataset.note);
+  else if (missing) openEditor(null, missing.dataset.missing.split("/").pop());
+  else if (outline) {
+    switchMode("read");
+    const headings = $$("#note-panel article h1, #note-panel article h2, #note-panel article h3");
+    headings[Number(outline.dataset.outline)]?.scrollIntoView({ block: "start" });
+    if (matchMedia("(max-width: 1180px)").matches) openInspector(false);
   }
-}
-$("#inspector-note-tab").onclick = () => inspectorMode("note");
-$("#inspector-links-tab").onclick = () => inspectorMode("links");
+};
 $("#settings-button").onclick = () => {
   const panel = $("#graph-settings");
   panel.hidden = !panel.hidden;
@@ -1163,7 +1219,6 @@ async function closeEditor() {
 $("#new-button").onclick = () => openEditor();
 $("#empty-new-button").onclick = () => openEditor();
 $("#tree-new-button").onclick = () => openEditor();
-$("#tab-new-button").onclick = () => openEditor();
 $("#close-editor").onclick = closeEditor;
 $("#cancel-editor").onclick = closeEditor;
 $("#editor-dialog").addEventListener("cancel", (event) => {
@@ -1222,7 +1277,7 @@ $("#editor-form").onsubmit = async (event) => {
     state.query = "";
     $("#search").value = "";
     await load(note.id);
-    openInspector();
+    switchMode("read");
     notify(
       t("saved", {
         p0: state.storage === "server" ? t("text_server") : t("text_local"),
@@ -1291,6 +1346,7 @@ $("#note-panel").onclick = async (event) => {
     return openEditor(null, missing.dataset.missing.split("/").pop());
   if (tag) return setTag(tag.dataset.tag);
   if (action === "new") return openEditor();
+  if (action === "related") return openInspector();
   if (!note) return;
   if (action === "edit") openEditor(note);
   if (
@@ -1409,7 +1465,7 @@ async function importDocuments(files) {
     state.query = "";
     $("#search").value = "";
     await load(result.imported[0]);
-    if (result.imported.length) openInspector();
+    if (result.imported.length) switchMode("read");
     if (result.errors.length) {
       $("#import-progress").textContent = t("import_partial", {
         p0: result.imported.length,
@@ -1477,4 +1533,9 @@ if (!navigator.platform.toLowerCase().includes("mac")) {
   $("#search-shortcut").textContent = "Ctrl K";
   $(".key-hint").textContent = "Ctrl ↵";
 }
+const compactLayout = matchMedia("(max-width: 1180px)");
+openInspector(!compactLayout.matches);
+compactLayout.addEventListener("change", (event) => {
+  if (event.matches) openInspector(false);
+});
 load();

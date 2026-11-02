@@ -8,11 +8,12 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
     <script src="./i18n.js" defer></script>
+    <script src="./navigation.js" defer></script>
     <script src="./app.js" defer></script>
     <script src="./editor-controls.js" defer></script>
   </head>
   <body>
-    <div id="workspace" class="app-shell">
+    <div id="workspace" class="app-shell inspector-open" data-mode="read">
       <nav class="ribbon" aria-label="{{t `label_workspace_tools`}}">
         <button
           id="toggle-sidebar"
@@ -25,7 +26,7 @@
         <div class="ribbon-rule"></div>
         <button
           id="ribbon-graph"
-          class="ribbon-button active"
+          class="ribbon-button"
           title="{{t `label_graph`}}"
           aria-label="{{t `label_graph`}}"
         >
@@ -84,7 +85,7 @@
       </nav>
       <aside class="sidebar" aria-label="{{t `label_workspace_files`}}">
         <div class="sidebar-top">
-          <span>{{t `label_files`}}</span>
+          <span>{{t `topics`}}</span>
           <div>
             <button
               id="import-button"
@@ -110,15 +111,10 @@
             </button>
           </div>
         </div>
-        <div class="vault-heading">
-          <span data-icon="chevron-down"></span
-          ><span data-icon="folder-open"></span
-          ><strong>{{t `label_my_knowledge_workspace`}}</strong>
-        </div>
         <nav
           id="category-nav"
           class="quick-nav"
-          aria-label="{{t `label_browse_by_type`}}"
+          aria-label="{{t `filter_documents`}}"
         ></nav>
         <div
           id="file-tree"
@@ -160,32 +156,39 @@
             aria-label="{{t `label_view_mode`}}"
           >
             <button
-              id="graph-tab"
+              id="read-tab"
               class="view-tab active"
               role="tab"
               aria-selected="true"
-              aria-controls="graph-panel"
+              aria-controls="read-panel"
             >
-              <span data-icon="graph"></span>{{t `label_graph`}}</button
-            ><button
+              <span data-icon="book"></span>{{t `reading`}}
+            </button>
+            <button
               id="list-tab"
               class="view-tab"
               role="tab"
               aria-selected="false"
               aria-controls="list-panel"
             >
-              <span data-icon="file"></span>{{t `label_notes`}}
+              <span data-icon="files"></span>{{t `notes_view`}}
             </button>
+            <button
+              id="graph-tab"
+              class="view-tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="graph-panel"
+            >
+              <span data-icon="graph"></span>{{t `label_graph`}}</button>
           </div>
-          <button
-            id="tab-new-button"
-            class="icon-button"
-            title="{{t `label_new_document`}}"
-            aria-label="{{t `label_create_document`}}"
-          >
-            <span data-icon="plus"></span>
-          </button>
           <div class="tabbar-space"></div>
+          <button
+            id="fullscreen-note"
+            class="icon-button"
+            title="{{t `label_read_document_full_screen`}}"
+            aria-label="{{t `label_read_document_full_screen`}}"
+          ><span data-icon="expand"></span></button>
           <label class="workspace-language"
             ><span class="sr-only">{{t `language`}}</span
             ><select id="workspace-language" aria-label="{{t `language`}}">
@@ -204,8 +207,8 @@
         </header>
         <div class="workspace-toolbar">
           <div class="breadcrumb">
-            <span data-icon="graph"></span
-            ><span id="page-title">{{t `label_knowledge_graph`}}</span
+            <span data-icon="book"></span
+            ><span id="page-title">{{t `label_notes`}}</span
             ><span class="breadcrumb-slash">/</span
             ><span id="filter-summary">{{t `label_all_documents`}}</span>
           </div>
@@ -234,16 +237,26 @@
             aria-label="{{t `label_graph_settings`}}"
             aria-expanded="false"
             title="{{t `label_graph_settings`}}"
+            hidden
           >
             <span data-icon="sliders"></span>
           </button>
         </div>
         <main class="workspace-content">
           <section
+            id="read-panel"
+            class="read-panel"
+            role="tabpanel"
+            aria-labelledby="read-tab"
+          >
+            <div id="note-panel" class="note-panel" tabindex="0" aria-label="{{t `label_document_details`}}"></div>
+          </section>
+          <section
             id="graph-panel"
             class="graph-panel"
             role="tabpanel"
             aria-labelledby="graph-tab"
+            hidden
           >
             <div id="graph-container" class="graph-container">
               <svg
@@ -273,9 +286,9 @@
                 class="scope-switch"
                 aria-label="{{t `label_connection_depth`}}"
               >
-                <button data-depth="0" class="active" aria-pressed="true">
+                <button data-depth="0" aria-pressed="false">
                   {{t `label_global`}}</button
-                ><button data-depth="1" aria-pressed="false">
+                ><button data-depth="1" class="active" aria-pressed="true">
                   {{t `label_1_hop`}}</button
                 ><button data-depth="2" aria-pressed="false">
                   {{t `label_2_hops`}}
@@ -340,34 +353,18 @@
           <aside
             id="inspector"
             class="inspector"
-            aria-label="{{t `label_document_sidebar`}}"
+            aria-label="{{t `text_related_documents`}}"
           >
             <div class="inspector-toolbar">
-              <div role="tablist" aria-label="{{t `label_document_panel`}}">
-                <button
-                  id="inspector-note-tab"
-                  class="inspector-tab active"
-                  role="tab"
-                  aria-selected="true"
-                >
-                  {{t `label_notes`}}</button
-                ><button
-                  id="inspector-links-tab"
-                  class="inspector-tab"
-                  role="tab"
-                  aria-selected="false"
-                >
-                  {{t `label_links`}}
-                </button>
-              </div>
+              <span>{{t `text_related_documents`}}</span>
               <div class="inspector-actions">
                 <button
-                  id="fullscreen-note"
-                  class="reader-trigger"
-                  title="{{t `label_read_document_full_screen`}}"
-                  aria-label="{{t `label_read_document_full_screen`}}"
+                  id="related-graph"
+                  class="icon-button"
+                  title="{{t `view_related_graph`}}"
+                  aria-label="{{t `view_related_graph`}}"
                 >
-                  <span data-icon="expand"></span>{{t `label_full_screen`}}</button
+                  <span data-icon="graph"></span></button
                 ><button
                   id="close-inspector"
                   class="icon-button"
@@ -378,11 +375,7 @@
                 </button>
               </div>
             </div>
-            <div
-              id="note-panel"
-              class="note-panel"
-              aria-label="{{t `label_document_details`}}"
-            ></div>
+            <div id="relation-panel" class="relation-panel"></div>
           </aside>
           <div id="graph-settings" class="graph-settings" hidden>
             <div class="settings-heading">{{t `label_graph_display`}}</div>
