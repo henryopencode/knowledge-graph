@@ -1,0 +1,22 @@
+# Merge this insertion into ~/.dsh/cordis.patch.yml (all profiles), or into one
+# profile's cordis.patch.yml. Authentication uses the owner's existing SSH key.
+- insert:
+    - id: mcp-devgraph-knowledge
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: knowledge
+        transport: stdio
+        command: /usr/bin/ssh
+        args:
+          - -T
+          - -o
+          - BatchMode=yes
+          - -o
+          - ConnectTimeout=10
+          - -o
+          - ServerAliveInterval=15
+          - -o
+          - ServerAliveCountMax=2
+          - root@101.34.211.31
+          - runuser -u henryweb-content -- /opt/knowledge-graph/mcp/current/knowledge-mcp --root /var/lib/henryweb/documents --workspace-url https://knowledge.henryweb.site
+        toolCallTimeoutMs: 30000

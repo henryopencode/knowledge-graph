@@ -244,10 +244,17 @@ func (s *Store) List(locale string, graphOnly bool) ([]Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	groups := map[string][]Document{}
-	for _, d := range all {
-		groups[d.ID] = append(groups[d.ID], d)
+	result := selectDocuments(all, locale, graphOnly)
+	groups := groupDocuments(all)
+	for i := range result {
+		result[i] = s.decorate(result[i], groups[result[i].ID])
 	}
+	return result, nil
+}
+
+// selectDocuments is shared by the workspace and the filesystem-only reader.
+func selectDocuments(all []Document, locale string, graphOnly bool) []Document {
+	groups := groupDocuments(all)
 	result := []Document{}
 	for _, variants := range groups {
 		sort.Slice(variants, func(i, j int) bool { return variants[i].Locale < variants[j].Locale })
@@ -279,12 +286,16 @@ func (s *Store) List(locale string, graphOnly bool) ([]Document, error) {
 				d.TranslationStale = d.SourceRevision != variant.Version
 			}
 		}
-		d = s.decorate(d, variants)
 		result = append(result, d)
 	}
 	resolveRelations(result)
-	sort.Slice(result, func(i, j int) bool { return result[i].Updated > result[j].Updated })
-	return result, nil
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Updated == result[j].Updated {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].Updated > result[j].Updated
+	})
+	return result
 }
 func resolveRelations(documents []Document) {
 	aliases := map[string][]int{}

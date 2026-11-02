@@ -7,6 +7,7 @@
 - [开发与数据规范](docs/zh-CN.md)
 - [部署与拆分迁移](deploy/README.md)
 - [API 协议](contracts/openapi.json)
+- [Neurix 知识库接入](docs/mcp.md)
 
 本项目拥有文档、鉴权、图谱、附件和发布流程。博客是独立应用，只通过公开 API 读取已发布快照，不读取私有目录。
 
