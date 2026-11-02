@@ -84,7 +84,7 @@ svg.icon { width: 18px; height: 18px; flex: none; stroke: currentColor; stroke-w
 .tree-folder[open] summary > .icon { transform: none; }
 .count { margin-left: auto; font-size: 11px; color: var(--muted); }
 .tree-files { padding: 0 0 5px 16px; }
-.tree-note { display: block; width: 100%; text-align: left; padding: 9px 10px; margin-bottom: 2px; border-radius: 5px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.tree-note { display: block; width: 100%; text-align: left; padding: 9px 10px; margin-bottom: 2px; border-radius: 5px; font-size: 12px; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tree-note:hover { background: var(--hover); }
 .tree-note.selected { background: var(--active); color: var(--accent-ink); }
 .tree-empty { color: var(--muted); font-size: 12px; padding: 16px 12px; }
