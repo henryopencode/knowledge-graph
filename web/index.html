@@ -94,6 +94,12 @@
               aria-label="{{t `label_import_markdown`}}"
             >
               <span data-icon="import"></span></button
+            ><a
+              href="./api/export"
+              class="icon-button"
+              title="{{t `label_export_workspace`}}"
+              aria-label="{{t `label_download_workspace_backup`}}"
+              ><span data-icon="download"></span></a
             ><button
               id="tree-new-button"
               class="icon-button"
@@ -133,20 +139,6 @@
           </summary>
           <div id="tags" class="tag-cloud"></div>
         </details>
-        <div class="vault-footer">
-          <span data-icon="vault"></span
-          ><span
-            >knowledge-graph<small id="storage-path"
-              >{{t `label_markdown_workspace`}}</small
-            ></span
-          ><a
-            href="./api/export"
-            class="icon-button"
-            title="{{t `label_export_workspace`}}"
-            aria-label="{{t `label_download_workspace_backup`}}"
-            ><span data-icon="download"></span
-          ></a>
-        </div>
       </aside>
       <div class="main-shell">
         <header class="tabbar">

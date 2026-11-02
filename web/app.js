@@ -20,8 +20,6 @@ const icons = {
   files: '<path d="M8 3h8l4 4v12H8V3ZM16 3v4h4M4 7v15h12"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16h.01"/>',
   moon: '<path d="M20.5 13.5A9 9 0 0 1 10.5 3.5a9 9 0 1 0 10 10Z"/>',
-  vault:
-    '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="4"/><path d="M12 8v8M8 12h8"/>',
   sliders:
     '<path d="M4 6h8m4 0h4M4 12h3m4 0h9M4 18h10m4 0h2"/><circle cx="14" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
@@ -173,11 +171,6 @@ async function load(preferred, quiet = false) {
     state.templates = data.templates;
     state.storage = data.storage || "local";
     $("#logout-button").hidden = !data.authenticated;
-    $("#storage-path").title = data.vault;
-    $("#storage-path").textContent =
-      state.storage === "server"
-        ? t("text_markdown_workspace")
-        : t("label_markdown_workspace");
     $("#editor-dialog .save-hint").innerHTML = t("save_location", {
       p0: icon("file"),
       p1: state.storage === "server" ? t("text_server") : t("text_local"),
